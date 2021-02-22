@@ -6,8 +6,8 @@ Custom: ?x? (allowed range in winmine.exe was 9 to 24 height and 9 to 30 width. 
 */
 
 var winmine = {};
-winmine.height = 9;
-winmine.width = 9;
+winmine.height = 8;
+winmine.width = 8;
 winmine.mine_count = 10;
 winmine.mouse_is_down = false;
 
@@ -52,9 +52,21 @@ winmine.get_array_of_neighboring_mines = function(array_of_neighbor_cells) {
 	return(neighbor_mines);
 }
 
-winmine.fill_cell_container = function(height, width) {
+winmine.random = function(min, max) {
+	const range = max - min + 1
+	const bits_needed = Math.ceil(Math.log2(range))
+	const bytes_needed = Math.ceil(bits_needed / 8)
+	const cutoff = Math.floor((256 ** bytes_needed) / range) * range
+	const bytes = new Uint8Array(bytes_needed)
+	let value
+	do {
+			crypto.getRandomValues(bytes)
+			value = bytes.reduce((acc, x, n) => acc + x * 256 ** n, 0)
+	} while (value >= cutoff)
+	return min + value % range
+}
 
-	const number_of_cells = height * width;
+winmine.fill_cell_container = function(height, width) {
 
 	// the global cells index, an array of row column ids (row_col)
 	winmine.cells = [];
@@ -72,12 +84,9 @@ winmine.fill_cell_container = function(height, width) {
 		cell_container.append(cell_div);
 	}
 
-	// create mines array with values used in cells array
-	// create numeric vector beginning with 0 equal to count of cells in grid, then sort with Math.random() and trim to length of specified mines
-	const random_numbers = Array.from(new Array(number_of_cells),(val,index)=>index).sort(function () { return Math.random() - 0.5;}).slice(0, winmine.mine_count);
 	winmine.mines = [];
-	for (let i = 0; i < random_numbers.length; i += 1) {
-		winmine.mines.push(winmine.cells[random_numbers[i]]);
+	for (let i = 0; i < winmine.mine_count; i += 1) {
+		winmine.mines.push(winmine.cells[winmine.random(0,winmine.cells.length)]);
 	}
 	//winmine.mines = ["6_1", "3_1", "1_4", "2_7", "0_7", "1_2", "6_7", "4_5", "0_3", "0_8"];
 	//winmine.mines = ["4_5", "4_6", "6_8", "5_5", "8_8"];
@@ -92,14 +101,14 @@ winmine.fill_cell_container = function(height, width) {
 winmine.choose_cell = function(cell_html_id) {
 	const cell_id_string = cell_html_id.substring(5);
 	const cell_element = document.getElementById(cell_html_id);
-	// 1. if cell is a mine, bye
+	// 1. if cell is a mine, game over
 	if(winmine.mines.includes(cell_id_string)) {
 		//cell_element.classList.add('triggered-mine-cell'); // apply this to selected cell element
 		cell_element.classList.add('mine-cell'); // apply this to every mine cell in winmine.mines
 		cell_element.classList.add('triggered-cell');
 		return;
 	}
-	// 2. if cell is not a mine, here we go
+	// 2. if cell is a neighbor of a mine, trigger cell with 1-8 integer 
 	const neighboring_cells = winmine.get_array_of_neighbor_cells(cell_id_string);
 	const neighboring_mines = winmine.get_array_of_neighboring_mines(neighboring_cells);
 	if(neighboring_mines.length > 0) {
@@ -108,11 +117,11 @@ winmine.choose_cell = function(cell_html_id) {
 		winmine.triggered_cells.push(cell_id_string);
 		return;
 	}
+	// 3. if cell is not a mine or a neighbor, do a recursive for search
 	if(neighboring_mines.length == 0) {
 		winmine.triggered_cells.push(cell_id_string);
 		cell_element.classList.add('triggered-cell');
 		let search_elements_array = neighboring_cells;
-		//winmine.triggered_cells.push(...search_elements_array);
 		for (let i = 0; i < search_elements_array.length; i += 1) {
 			const cell_id_string2 = search_elements_array[i];
 			const cell_element2 = document.getElementById('cell_'.concat(cell_id_string2));
@@ -131,6 +140,7 @@ winmine.choose_cell = function(cell_html_id) {
 			}
 			if(search_elements_array.length > 800) {
 				alert("too many cells");
+				return;
 			}
 		}
 	}
