@@ -71,9 +71,56 @@ winmine.random = function(min, max) {
 	return min + value % range
 }
 
-winmine.fill_cell_container = function(height, width) {
+winmine.segsev = {};
+winmine.fill_seven_segment_container = function(seven_container_html_id) {
+	winmine.segsev.a_cells = [2,3,4,5,6,7,8,9,10,14,15,16,17,18,19,20,26,27,28,29,30];
+	winmine.segsev.b_cells = [22,32,33,42,43,44,53,54,55,64,65,66,75,76,77,86,87,88,98,99,110];
+	winmine.segsev.c_cells = [132,142,143,152,153,154,163,164,165,174,175,176,185,186,187,196,197,198,208,209,220];
+	winmine.segsev.d_cells = [202,203,204,205,206,212,213,214,215,216,217,218,222,223,224,225,226,227,228,229,230];
+	winmine.segsev.e_cells = [133,145,155,157,167,177,179,189,199];
+	winmine.segsev.f_cells = [23,35,45,47,57,67,69,79,89];
+	winmine.segsev.g_cells = [104,106,114,116,118,126,128];
+	winmine.segsev.style1_cells = [3,5,7,9,12,15,17,19,22,24,27,29,32,34,36,42,44,46,54,56,58,64,66,68,76,78,80,86,88,90,98,100,103,105,107,110,113,115,117,119,122,125,127,129,132,134,142,144,146,152,154,156,164,166,168,174,176,178,186,188,190,196,198,200,203,205,208,210,213,215,217,220,223,225,227,229];
+	winmine.segsev.style2_cells = [2,4,6,8,10,14,16,18,20,23,26,28,30,33,35,43,45,47,53,55,57,65,67,69,75,77,79,87,89,99,104,106,114,116,118,126,128,133,143,145,153,155,157,163,165,167,175,177,179,185,187,189,197,199,202,204,206,209,212,214,216,218,222,224,226,228,230];	
+	const seven_height = 21;
+	const seven_width = 11;
+	/* const seven_container = document.querySelector('.seven-container'); */
+	const seven_container = document.getElementById(seven_container_html_id);
+	for (let i = 1; i < ((seven_height*seven_width)+1); i += 1) {
+		const cell_div = document.createElement('div');
+		/* cell_div.id = 'px' + i; */
+		if(winmine.segsev.a_cells.includes(i)) { cell_div.classList.add("A7"); }
+		if(winmine.segsev.b_cells.includes(i)) { cell_div.classList.add("B7"); }
+		if(winmine.segsev.c_cells.includes(i)) { cell_div.classList.add("C7"); }
+		if(winmine.segsev.d_cells.includes(i)) { cell_div.classList.add("D7"); }
+		if(winmine.segsev.e_cells.includes(i)) { cell_div.classList.add("E7"); }
+		if(winmine.segsev.f_cells.includes(i)) { cell_div.classList.add("F7"); }
+		if(winmine.segsev.g_cells.includes(i)) { cell_div.classList.add("G7"); }
+		if(winmine.segsev.style1_cells.includes(i)) { cell_div.classList.add("x7"); }
+		if(winmine.segsev.style2_cells.includes(i)) { cell_div.classList.add("y7"); }
+		seven_container.append(cell_div);
+	}
+	const grid_template_rows = 'auto '.repeat(seven_height);
+	const grid_template_columns = 'auto '.repeat(seven_width);
+	seven_container.style.setProperty('grid-template-rows', grid_template_rows);
+	seven_container.style.setProperty('grid-template-columns', grid_template_columns);
+}
 
-	// create global cells index, an array of row column ids (row_col)
+winmine.create_scoreboard_mine_counter = function() {
+	const seven_elements = ["counter1","counter2","counter3"];
+	for (let i = 0; i < seven_elements.length; i += 1) {
+		winmine.fill_seven_segment_container(seven_elements[i]);
+	}
+}
+winmine.create_scoreboard_timer = function() {
+	const seven_elements = ["timer1","timer2","timer3"];
+	for (let i = 0; i < seven_elements.length; i += 1) {
+		winmine.fill_seven_segment_container(seven_elements[i]);
+	}
+}
+
+winmine.fill_cell_container = function(height, width) {
+	/* create global cells index, an array of row column ids (row_col) */
 	winmine.cells = [];
 	for (let row = 0; row < height; row += 1) {
 		for (let col = 0; col < width; col += 1) {
@@ -81,11 +128,11 @@ winmine.fill_cell_container = function(height, width) {
 		}
 	}
 
-	winmine.triggered_cells = []; // cells are pushed here onmouseup
-	winmine.flagged_cells = []; // cells are pushed here contextmenu (right click)
-	winmine.marked_cells = []; // another contextmenu, question mark cells
+	winmine.triggered_cells = []; /* cells are pushed here onmouseup */
+	winmine.flagged_cells = []; /* cells are pushed here contextmenu (right click) */
+	winmine.marked_cells = []; /* another right click contextmenu, for question mark cells */
 
-	// create html div grid cells
+	/* create html div grid cells */
 	const cell_container = document.querySelector('.cell-container');
 	for (let i = 0; i < winmine.cells.length; i += 1) {
 		const cell_div = document.createElement('div');
@@ -97,7 +144,7 @@ winmine.fill_cell_container = function(height, width) {
 	cell_container.style.setProperty('grid-template-rows', grid_template_rows);
 	cell_container.style.setProperty('grid-template-columns', grid_template_columns);
 
-	// create mine array
+	/* create mine array */
 	winmine.mines = [];
 	while(winmine.mines.length < winmine.mine_count) {
 		let random_int = winmine.random(0,(winmine.cells.length-1));
@@ -110,7 +157,7 @@ winmine.fill_cell_container = function(height, width) {
 winmine.choose_cell = function(cell_html_id) {
 	const cell_id_string = cell_html_id.substring(5);
 	const cell_element = document.getElementById(cell_html_id);
-	// 1. if cell is a mine, game over
+	/* 1. if cell is a mine, game over */
 	if(winmine.mines.includes(cell_id_string)) {
 		cell_element.classList.add('triggered-cell','triggered-mine-cell');
 		for (let i = 0; i < winmine.mines.length; i += 1) {
@@ -126,7 +173,7 @@ winmine.choose_cell = function(cell_html_id) {
 	// check for win how? compare length everytime if flagged mine length mine count?
 	// compare length of triggered cells wth mine count?
 	/* 2. if winmine.triggered_cells.length = ((height*width)) - winmine.mine_count) */
-	// 3. if cell is a neighbor of a mine, trigger cell with 1-8 integer 
+	/* 3. if cell is a neighbor of a mine, trigger cell with 1-8 integer  */
 	const neighboring_cells = winmine.get_array_of_neighbor_cells(cell_id_string);
 	const neighboring_mines = winmine.get_array_of_neighboring_mines(neighboring_cells);
 	if(neighboring_mines.length > 0) {
@@ -135,7 +182,7 @@ winmine.choose_cell = function(cell_html_id) {
 		winmine.triggered_cells.push(cell_id_string);
 		return;
 	}
-	// 4. if cell is not a mine or a neighbor, do a recursive for search
+	/* 4. if cell is not a mine or a neighbor, do a recursive for search */
 	if(neighboring_mines.length == 0) {
 		winmine.triggered_cells.push(cell_id_string);
 		cell_element.classList.add('triggered-cell');
@@ -145,7 +192,7 @@ winmine.choose_cell = function(cell_html_id) {
 			const cell_element2 = document.getElementById('cell_'.concat(cell_id_string2));
 			const neighboring_cells2 = winmine.get_array_of_neighbor_cells(cell_id_string2);
 			const neighboring_mines2 = winmine.get_array_of_neighboring_mines(neighboring_cells2);
-			// skip evaluating right-clicked cells
+			/* skip evaluating right-clicked cells */
 			if(winmine.flagged_cells.includes(cell_id_string2) || winmine.marked_cells.includes(cell_id_string2)) {
 				continue;
 			}
@@ -193,6 +240,8 @@ document.addEventListener("DOMContentLoaded", function() {
 	winmine.game_over = false;
 	winmine.load_config();
 	winmine.fill_cell_container(winmine.height, winmine.width);
+	winmine.create_scoreboard_mine_counter();
+	winmine.create_scoreboard_timer();
 
 	/* file menu container events are at the file menu item level */
 	const menu_items = document.querySelectorAll('.menu-game-container > div');
@@ -200,10 +249,23 @@ document.addEventListener("DOMContentLoaded", function() {
 		const menu_item = menu_items[i];
 		menu_item.addEventListener('mouseup', e => {
 			const item_text = menu_item.innerHTML;
-			console.log(item_text);
+			if(item_text == "New") {
+				location.reload();
+				return;
+			}
 			if(item_text == "Beginner") {
 				const new_window_salt = winmine.random(100000,999999);
-				window.open('index.html', 'Beginner' + '_' + new_window_salt, 'width=148,height=211');
+				window.open('index.html?height=8&width=8&mines=10', 'Beginner' + '_' + new_window_salt, 'width=148,height=211');
+				return;
+			}
+			if(item_text == "Intermediate") {
+				const new_window_salt = winmine.random(100000,999999);
+				window.open('index.html?height=16&width=16&mines=40', 'Intermediate' + '_' + new_window_salt, 'width=276,height=339');
+				return;
+			}
+			if(item_text == "Expert") {
+				const new_window_salt = winmine.random(100000,999999);
+				window.open('index.html?height=16&width=30&mines=99', 'Expert' + '_' + new_window_salt, 'width=500,height=339');
 				return;
 			}
 		});
