@@ -71,17 +71,17 @@ winmine.random = function(min, max) {
 	return min + value % range
 }
 
-winmine.segsev = {};
+winmine.sevseg = {};
 winmine.fill_seven_segment_container = function(seven_container_html_id) {
-	winmine.segsev.a_cells = [2,3,4,5,6,7,8,9,10,14,15,16,17,18,19,20,26,27,28,29,30];
-	winmine.segsev.b_cells = [22,32,33,42,43,44,53,54,55,64,65,66,75,76,77,86,87,88,98,99,110];
-	winmine.segsev.c_cells = [132,142,143,152,153,154,163,164,165,174,175,176,185,186,187,196,197,198,208,209,220];
-	winmine.segsev.d_cells = [202,203,204,205,206,212,213,214,215,216,217,218,222,223,224,225,226,227,228,229,230];
-	winmine.segsev.e_cells = [133,145,155,157,167,177,179,189,199];
-	winmine.segsev.f_cells = [23,35,45,47,57,67,69,79,89];
-	winmine.segsev.g_cells = [104,106,114,116,118,126,128];
-	winmine.segsev.style1_cells = [3,5,7,9,12,15,17,19,22,24,27,29,32,34,36,42,44,46,54,56,58,64,66,68,76,78,80,86,88,90,98,100,103,105,107,110,113,115,117,119,122,125,127,129,132,134,142,144,146,152,154,156,164,166,168,174,176,178,186,188,190,196,198,200,203,205,208,210,213,215,217,220,223,225,227,229];
-	winmine.segsev.style2_cells = [2,4,6,8,10,14,16,18,20,23,26,28,30,33,35,43,45,47,53,55,57,65,67,69,75,77,79,87,89,99,104,106,114,116,118,126,128,133,143,145,153,155,157,163,165,167,175,177,179,185,187,189,197,199,202,204,206,209,212,214,216,218,222,224,226,228,230];	
+	winmine.sevseg.a_cells = [2,3,4,5,6,7,8,9,10,14,15,16,17,18,19,20,26,27,28,29,30];
+	winmine.sevseg.b_cells = [22,32,33,42,43,44,53,54,55,64,65,66,75,76,77,86,87,88,98,99,110];
+	winmine.sevseg.c_cells = [132,142,143,152,153,154,163,164,165,174,175,176,185,186,187,196,197,198,208,209,220];
+	winmine.sevseg.d_cells = [202,203,204,205,206,212,213,214,215,216,217,218,222,223,224,225,226,227,228,229,230];
+	winmine.sevseg.e_cells = [122,133,134,144,145,146,155,156,157,166,167,168,177,178,179,188,189,190,199,200,210];
+	winmine.sevseg.f_cells = [12,23,24,34,35,36,45,46,47,56,57,58,67,68,69,78,79,80,89,90,100];
+	winmine.sevseg.g_cells = [102,103,104,105,106,107,108,112,113,114,115,116,117,118,119,120,124,125,126,127,128,129,130];
+	winmine.sevseg.style1_cells = [3,5,7,9,12,15,17,19,22,24,27,29,32,34,36,42,44,46,54,56,58,64,66,68,76,78,80,86,88,90,98,100,103,105,107,110,113,115,117,119,122,125,127,129,132,134,142,144,146,152,154,156,164,166,168,174,176,178,186,188,190,196,198,200,203,205,208,210,213,215,217,220,223,225,227,229];
+	winmine.sevseg.style2_cells = [2,4,6,8,10,14,16,18,20,23,26,28,30,33,35,43,45,47,53,55,57,65,67,69,75,77,79,87,89,99,102,104,106,108,112,114,116,118,120,124,126,128,130,133,143,145,153,155,157,163,165,167,175,177,179,185,187,189,197,199,202,204,206,209,212,214,216,218,222,224,226,228,230];	
 	const seven_height = 21;
 	const seven_width = 11;
 	/* const seven_container = document.querySelector('.seven-container'); */
@@ -89,15 +89,15 @@ winmine.fill_seven_segment_container = function(seven_container_html_id) {
 	for (let i = 1; i < ((seven_height*seven_width)+1); i += 1) {
 		const cell_div = document.createElement('div');
 		/* cell_div.id = 'px' + i; */
-		if(winmine.segsev.a_cells.includes(i)) { cell_div.classList.add("A7"); }
-		if(winmine.segsev.b_cells.includes(i)) { cell_div.classList.add("B7"); }
-		if(winmine.segsev.c_cells.includes(i)) { cell_div.classList.add("C7"); }
-		if(winmine.segsev.d_cells.includes(i)) { cell_div.classList.add("D7"); }
-		if(winmine.segsev.e_cells.includes(i)) { cell_div.classList.add("E7"); }
-		if(winmine.segsev.f_cells.includes(i)) { cell_div.classList.add("F7"); }
-		if(winmine.segsev.g_cells.includes(i)) { cell_div.classList.add("G7"); }
-		if(winmine.segsev.style1_cells.includes(i)) { cell_div.classList.add("x7"); }
-		if(winmine.segsev.style2_cells.includes(i)) { cell_div.classList.add("y7"); }
+		if(winmine.sevseg.a_cells.includes(i)) { cell_div.classList.add("A7"); }
+		if(winmine.sevseg.b_cells.includes(i)) { cell_div.classList.add("B7"); }
+		if(winmine.sevseg.c_cells.includes(i)) { cell_div.classList.add("C7"); }
+		if(winmine.sevseg.d_cells.includes(i)) { cell_div.classList.add("D7"); }
+		if(winmine.sevseg.e_cells.includes(i)) { cell_div.classList.add("E7"); }
+		if(winmine.sevseg.f_cells.includes(i)) { cell_div.classList.add("F7"); }
+		if(winmine.sevseg.g_cells.includes(i)) { cell_div.classList.add("G7"); }
+		if(winmine.sevseg.style1_cells.includes(i)) { cell_div.classList.add("x7"); }
+		if(winmine.sevseg.style2_cells.includes(i)) { cell_div.classList.add("y7"); }
 		seven_container.append(cell_div);
 	}
 	const grid_template_rows = 'auto '.repeat(seven_height);
@@ -106,16 +106,69 @@ winmine.fill_seven_segment_container = function(seven_container_html_id) {
 	seven_container.style.setProperty('grid-template-columns', grid_template_columns);
 }
 
-winmine.create_scoreboard_mine_counter = function() {
-	const seven_elements = ["counter1","counter2","counter3"];
+winmine.sevseg.get_segment_array = function(int) {
+	if(int==='0') { return(['A','B','C','D','E','F']); }
+	if(int==='1') { return(['B','C']); }
+	if(int==='2') { return(['A','B','D','E','G']); }
+	if(int==='3') { return(['A','B','C','D','G']); }
+	if(int==='4') { return(['B','C','F','G']); }
+	if(int==='5') { return(['A','C','D','F','G']); }
+	if(int==='6') { return(['A','C','D','E','F','G']); }
+	if(int==='7') { return(['A','B','C']); }
+	if(int==='8') { return(['A','B','C','D','E','F','G']); }
+	if(int==='9') { return(['A','B','C','D','F','G']); }
+	if(int==='-') { return(['G']); }
+}
+
+winmine.insert_seven_segment_elements = function() {
+	const seven_elements = ["counter0","counter1","counter2",
+		"timer0","timer1","timer2"];
 	for (let i = 0; i < seven_elements.length; i += 1) {
 		winmine.fill_seven_segment_container(seven_elements[i]);
 	}
 }
-winmine.create_scoreboard_timer = function() {
-	const seven_elements = ["timer1","timer2","timer3"];
-	for (let i = 0; i < seven_elements.length; i += 1) {
-		winmine.fill_seven_segment_container(seven_elements[i]);
+
+winmine.set_mine_counter = function(remaining_mines) {
+	remaining_mines = remaining_mines.toString();
+	if(remaining_mines.charAt(0) === '-') {
+		remaining_mines = '-'.concat(remaining_mines.substring(1).padStart(2, 0));
+	} else {
+		remaining_mines = remaining_mines.padStart(3, 0);
+	}
+	document.querySelectorAll('#counter0 > div, #counter1 > div, #counter2 > div').forEach(function (element) {
+		element.classList.remove('the-red');
+	});
+	for(let i = 0; i < 3; i += 1) {
+		const anumber = remaining_mines.charAt(i);
+		const segment_array = winmine.sevseg.get_segment_array(anumber);
+		const counter_id = 'counter'+i;
+		const css_selector = '#' + counter_id + ' > .' + segment_array.join('7, #' + counter_id + ' > .').concat('7');
+		document.querySelectorAll(css_selector).forEach(function (element) {
+			element.classList.add('the-red');
+		});
+	}
+}
+
+winmine.counter_value = [];
+winmine.set_mine_counter2 = function(remaining_mines) {
+	remaining_mines = remaining_mines.toString();
+	if(remaining_mines.charAt(0) === '-') {
+		remaining_mines = '-'.concat(remaining_mines.substring(1).padStart(2, 0));
+	} else {
+		remaining_mines = remaining_mines.padStart(3, 0);
+	}
+	//if(remaining_mines.charAt() != )
+	document.querySelectorAll('#counter0 > div, #counter1 > div, #counter2 > div').forEach(function (element) {
+		element.classList.remove('the-red');
+	});
+	for(let i = 0; i < 3; i += 1) {
+		const anumber = remaining_mines.charAt(i);
+		const segment_array = winmine.sevseg.get_segment_array(anumber);
+		const counter_id = 'counter'+i;
+		const css_selector = '#' + counter_id + ' > .' + segment_array.join('7, #' + counter_id + ' > .').concat('7');
+		document.querySelectorAll(css_selector).forEach(function (element) {
+			element.classList.add('the-red');
+		});
 	}
 }
 
@@ -183,7 +236,7 @@ winmine.choose_cell = function(cell_html_id) {
 		return;
 	}
 	/* 4. if cell is not a mine or a neighbor, do a recursive for search */
-	if(neighboring_mines.length == 0) {
+	if(neighboring_mines.length === 0) {
 		winmine.triggered_cells.push(cell_id_string);
 		cell_element.classList.add('triggered-cell');
 		let search_elements_array = neighboring_cells;
@@ -232,6 +285,7 @@ winmine.flag_cell = function(cell_html_id) {
 		cell_element.classList.remove('marked-cell');
 		winmine.marked_cells = winmine.marked_cells.filter(item => item !== cell_id_string);
 	}
+	winmine.set_mine_counter(winmine.mine_count - winmine.flagged_cells.length);
 }
 
 /* create all the javascript event listeners */
@@ -240,8 +294,8 @@ document.addEventListener("DOMContentLoaded", function() {
 	winmine.game_over = false;
 	winmine.load_config();
 	winmine.fill_cell_container(winmine.height, winmine.width);
-	winmine.create_scoreboard_mine_counter();
-	winmine.create_scoreboard_timer();
+	winmine.insert_seven_segment_elements();
+	winmine.set_mine_counter(winmine.mine_count);
 
 	/* file menu container events are at the file menu item level */
 	const menu_items = document.querySelectorAll('.menu-game-container > div');
@@ -249,21 +303,21 @@ document.addEventListener("DOMContentLoaded", function() {
 		const menu_item = menu_items[i];
 		menu_item.addEventListener('mouseup', e => {
 			const item_text = menu_item.innerHTML;
-			if(item_text == "New") {
+			if(item_text === "New") {
 				location.reload();
 				return;
 			}
-			if(item_text == "Beginner") {
+			if(item_text === "Beginner") {
 				const new_window_salt = winmine.random(100000,999999);
 				window.open('index.html?height=8&width=8&mines=10', 'Beginner' + '_' + new_window_salt, 'width=148,height=211');
 				return;
 			}
-			if(item_text == "Intermediate") {
+			if(item_text === "Intermediate") {
 				const new_window_salt = winmine.random(100000,999999);
 				window.open('index.html?height=16&width=16&mines=40', 'Intermediate' + '_' + new_window_salt, 'width=276,height=339');
 				return;
 			}
-			if(item_text == "Expert") {
+			if(item_text === "Expert") {
 				const new_window_salt = winmine.random(100000,999999);
 				window.open('index.html?height=16&width=30&mines=99', 'Expert' + '_' + new_window_salt, 'width=500,height=339');
 				return;
@@ -278,7 +332,11 @@ document.addEventListener("DOMContentLoaded", function() {
 		/* use mousedown with mouseover to imitate drag-around effect */
 		wm_cell.addEventListener('mousedown', e => {
 			if(winmine.game_over === true) { return; }
-			if(e.button == 2) { return; }
+			if(e.button === 2) { 
+				if(wm_cell.classList.contains('triggered-cell')) { return; }
+				winmine.flag_cell(wm_cell.id);
+				return;
+			}
 			winmine.mouse_is_down = true;
 			if(wm_cell.classList.contains('flagged-cell')) { return; }
 			if(wm_cell.classList.contains('marked-cell')) { return; }
@@ -288,7 +346,7 @@ document.addEventListener("DOMContentLoaded", function() {
 		});
 		wm_cell.addEventListener('mouseup', e => {
 			if(winmine.game_over === true) { return; }
-			if(e.button == 2) { return; }
+			if(e.button === 2) { return; }
 			if(wm_cell.classList.contains('flagged-cell')) { return; }
 			if(wm_cell.classList.contains('marked-cell')) { return; }
 			winmine.mouse_is_down = false;
@@ -299,7 +357,7 @@ document.addEventListener("DOMContentLoaded", function() {
 			if(winmine.game_over === true) { return; }
 			if(wm_cell.classList.contains('flagged-cell')) { return; }
 			if(wm_cell.classList.contains('marked-cell')) { return; }
-			if(winmine.mouse_is_down == true) {
+			if(winmine.mouse_is_down === true) {
 				wm_cell.classList.add('active-cell');
 			}
 		});
@@ -311,9 +369,9 @@ document.addEventListener("DOMContentLoaded", function() {
 		});
 		wm_cell.addEventListener("contextmenu", function(e) {
 			e.preventDefault();
-			if(winmine.game_over === true) { return; }
+/* 			if(winmine.game_over === true) { return; }
 			if(wm_cell.classList.contains('triggered-cell')) { return; }
-			winmine.flag_cell(wm_cell.id);
+			winmine.flag_cell(wm_cell.id); */
 		});
  	}
 
