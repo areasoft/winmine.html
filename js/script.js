@@ -149,28 +149,10 @@ winmine.set_mine_counter = function(remaining_mines) {
 	}
 }
 
-winmine.counter_value = [];
-winmine.set_mine_counter2 = function(remaining_mines) {
-	remaining_mines = remaining_mines.toString();
-	if(remaining_mines.charAt(0) === '-') {
-		remaining_mines = '-'.concat(remaining_mines.substring(1).padStart(2, 0));
-	} else {
-		remaining_mines = remaining_mines.padStart(3, 0);
-	}
-	//if(remaining_mines.charAt() != )
-	document.querySelectorAll('#counter0 > div, #counter1 > div, #counter2 > div').forEach(function (element) {
-		element.classList.remove('the-red');
-	});
-	for(let i = 0; i < 3; i += 1) {
-		const anumber = remaining_mines.charAt(i);
-		const segment_array = winmine.sevseg.get_segment_array(anumber);
-		const counter_id = 'counter'+i;
-		const css_selector = '#' + counter_id + ' > .' + segment_array.join('7, #' + counter_id + ' > .').concat('7');
-		document.querySelectorAll(css_selector).forEach(function (element) {
-			element.classList.add('the-red');
-		});
-	}
+winmine.start_timer = function(remaining_mines) {
+
 }
+
 
 winmine.fill_cell_container = function(height, width) {
 	/* create global cells index, an array of row column ids (row_col) */
@@ -208,24 +190,45 @@ winmine.fill_cell_container = function(height, width) {
 }
 
 winmine.choose_cell = function(cell_html_id) {
+	if(performance.getEntriesByName("game_start").length === 0) {
+		performance.mark("game_start");
+	}
 	const cell_id_string = cell_html_id.substring(5);
 	const cell_element = document.getElementById(cell_html_id);
 	/* 1. if cell is a mine, game over */
 	if(winmine.mines.includes(cell_id_string)) {
+		winmine.game_over = true;
+		winmine.game_win = false;
 		cell_element.classList.add('triggered-cell','triggered-mine-cell');
+		const smiley_frame = document.getElementsByClassName('smiley-container')[0];
+		smiley_frame.classList.remove('face-neutral');
+		smiley_frame.classList.add('face-game-over');
 		for (let i = 0; i < winmine.mines.length; i += 1) {
 			if(!winmine.flagged_cells.includes(winmine.mines[i])) {
 				const mine_cell = document.getElementById('cell_'.concat(winmine.mines[i]))
 				mine_cell.classList.remove('marked-cell');
 				mine_cell.classList.add('triggered-cell','mine-cell');
 			}
-			winmine.game_over = true;
 		}
 		return;
 	}
 	// check for win how? compare length everytime if flagged mine length mine count?
 	// compare length of triggered cells wth mine count?
 	/* 2. if winmine.triggered_cells.length = ((height*width)) - winmine.mine_count) */
+	if(winmine.triggered_cells.length === (winmine.cells.length - winmine.mine_count)) {
+		performance.mark("game_end");
+		const play_duration = performance.measure("m", "game_start", "game_end").duration / 1000;
+		//performance.clearMarks();
+		winmine.game_over = true;
+		winmine.game_win = true;
+		const smiley_frame = document.getElementsByClassName('smiley-container')[0];
+		smiley_frame.classList.remove('face-neutral');
+		smiley_frame.classList.add('face-game-win');
+		// for every cell that is in flagged cells , if the cell isnt actually a mine, give it the nomine class
+
+		return;
+	}
+
 	/* 3. if cell is a neighbor of a mine, trigger cell with 1-8 integer  */
 	const neighboring_cells = winmine.get_array_of_neighbor_cells(cell_id_string);
 	const neighboring_mines = winmine.get_array_of_neighboring_mines(neighboring_cells);
@@ -349,7 +352,7 @@ document.addEventListener("DOMContentLoaded", function() {
 			if(e.button === 2) { return; }
 			if(wm_cell.classList.contains('flagged-cell')) { return; }
 			if(wm_cell.classList.contains('marked-cell')) { return; }
-			winmine.mouse_is_down = false;
+			//winmine.mouse_is_down = false;
 			wm_cell.classList.remove('active-cell');
 			winmine.choose_cell(wm_cell.id);
 		});
@@ -375,12 +378,67 @@ document.addEventListener("DOMContentLoaded", function() {
 		});
  	}
 
+/* 	document.getElementsByClassName('.smiley-frame').addEventListener("mousedown") {
+
+	} */
+	const smiley_frame = document.getElementsByClassName('smiley-container')[0];
+	smiley_frame.addEventListener("mousedown", function(e) {
+		smiley_frame.classList.add('smiley-container-mousedown');
+		smiley_frame.classList.add('face-neutral');
+		winmine.mouse_is_down_smiley = true;
+	});
+	smiley_frame.addEventListener("mouseup", function(e) {
+		if(smiley_frame.classList.contains('face-cursor-down')) {
+			return;
+		};
+		location.reload();
+	});
+	smiley_frame.addEventListener('mouseover', function(e) {
+		if(winmine.mouse_is_down_smiley === true) {
+			smiley_frame.classList.add('smiley-container-mousedown');
+			smiley_frame.classList.add('face-neutral');
+		}
+	});
+	smiley_frame.addEventListener("mouseout", function(e) {
+		smiley_frame.classList.remove('smiley-container-mousedown');
+		smiley_frame.classList.remove('face-neutral');
+		if(smiley_frame.classList.contains('face-cursor-down')) {
+			return;
+		};
+		if(winmine.game_over === true) {
+			if(winmine.game_win === true) {
+				smiley_frame.classList.add('face-game-win');
+			} else {
+				smiley_frame.classList.add('face-game-over');
+			}
+		} else {
+			smiley_frame.classList.add('face-neutral');
+		}
+	});
+
 	/* prevent broswer from displaying the "not allowable" cursor (used when click dragging cursor because elements are moveable in html) */
-	document.body.addEventListener('mousedown', e => {
+/* 	document.body.addEventListener('mousedown', e => {
 		e.preventDefault();
+	}); */
+	document.body.addEventListener('mousedown', function(e) {
+		if(winmine.game_over == false && !e.target.classList.contains('smiley-container')) {
+			const smiley_frame = document.getElementsByClassName('smiley-container')[0];
+			smiley_frame.classList.remove('face-neutral');
+			smiley_frame.classList.add('face-cursor-down');
+			document.getElementsByClassName('smiley-container')[0].classList.add('face-cursor-down');
+		}
 	});
 	/* winmine.exe would remember your mouse button was down even if you left the window, as long as it stayed in focus. not sure this is possible in browser */
-	document.body.addEventListener('mouseleave', e => {
+	document.body.addEventListener('mouseleave', function(e) {
 		winmine.mouse_is_down = false;
-	});	
+	});
+	document.body.addEventListener("mouseup", function(e) {
+		winmine.mouse_is_down = false;
+		winmine.mouse_is_down_smiley = false;
+		if(winmine.game_over === false) {
+			const smiley_frame = document.getElementsByClassName('smiley-container')[0];
+			smiley_frame.classList.remove('face-cursor-down');
+			smiley_frame.classList.add('face-neutral');
+		}
+	});
 });
