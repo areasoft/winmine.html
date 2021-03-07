@@ -6,7 +6,7 @@ html, body {
 	cursor: default;
 }
 
-/* prevent the item-dragging not-allowable cursor behavior. not sure if better than javascript method e.g. mousedown e.preventDefault(); */
+/* prevent the item-dragging not-allowable cursor behavior. not sure if this is better than javascript method e.g. mousedown e.preventDefault(); */
 *, *::after, *::before {
 	cursor: default;
 	user-select: none;
@@ -55,14 +55,6 @@ html, body {
 	background-color: rgba(245,246,247);
 	border: 1px solid rgba(204,204,204);
 }
-.menu-game-container > div {
-	font-family: 'Segoe UI';
-	font-size: 9pt;
-	width: 100%;
-}
-.menu-game-container > div:hover {
-	background-color: rgba(209, 226, 242);
-}
 
 /* Help menu button stuff */
 .help-file-menu-frame {
@@ -91,13 +83,27 @@ html, body {
 	background-color: rgba(245,246,247);
 	border: 1px solid rgba(204,204,204);
 }
-.menu-help-container > div {
+
+.menu-item {
 	font-family: 'Segoe UI';
 	font-size: 9pt;
-	width: 100%;
+	padding: 1px 0px 1px 16px;
 }
-.menu-help-container > div:hover {
+.menu-item:hover {
 	background-color: rgba(209, 226, 242);
+}
+.menu-item-separator {
+	height: 1px;
+	background-color: #cccccc;
+	margin: 0px 3px 0px 3px;
+}
+.not-available {
+	color: #666666;
+}
+.menu-mark {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='7' height='7'%3E%3Cstyle%3E%3C!%5BCDATA%5B.B%7Bfill-opacity:0%7D%5D%5D%3E%3C/style%3E%3Cdefs%3E%3Cpath d='M1 4h3v2H1V4z' id='A'/%3E%3Cpath d='M0 3h2v2H0V3z' id='B'/%3E%3Cpath d='M2 4h1v3H2V4z' id='C'/%3E%3Cpath d='M0 2h1v3H0V2z' id='D'/%3E%3Cpath d='M3 3h2v2H3V3z' id='E'/%3E%3Cpath d='M4 2h2v2H4V2z' id='F'/%3E%3Cpath d='M5 1h2v2H5V1z' id='G'/%3E%3Cpath d='M6 0h1v3H6V0z' id='H'/%3E%3C/defs%3E%3Cuse xlink:href='%23A'/%3E%3Cuse xlink:href='%23A' class='B'/%3E%3Cuse xlink:href='%23B'/%3E%3Cuse xlink:href='%23B' class='B'/%3E%3Cuse xlink:href='%23C'/%3E%3Cuse xlink:href='%23C' class='B'/%3E%3Cuse xlink:href='%23D'/%3E%3Cuse xlink:href='%23D' class='B'/%3E%3Cuse xlink:href='%23E'/%3E%3Cuse xlink:href='%23E' class='B'/%3E%3Cuse xlink:href='%23F'/%3E%3Cuse xlink:href='%23F' class='B'/%3E%3Cuse xlink:href='%23G'/%3E%3Cuse xlink:href='%23G' class='B'/%3E%3Cuse xlink:href='%23H'/%3E%3Cuse xlink:href='%23H' class='B'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: 6px 50%;
 }
 
 /* Frame and border stuff */
@@ -155,7 +161,7 @@ html, body {
 	border-right: 2px solid rgba(128,128,128);
 	border-bottom: 2px solid rgba(128,128,128);
 }
-.active-cell, .triggered-cell {
+.active-cell, .triggered-cell, .nomine-cell {
 	padding: 1px 2px 2px 1px;
 	border-top: 1px solid rgba(128,128,128) !important;
 	border-left: 1px solid rgba(128,128,128) !important;
@@ -252,7 +258,7 @@ html, body {
 	display: flex;
 	height: 23px;
 	width: 39px;
-	background-color: rgba(0,0,0);;
+	background-color: rgba(0,0,0);
 	border-top: 1px solid rgba(128,128,128);
 	border-left: 1px solid rgba(128,128,128);
 	border-right: 1px solid rgba(255,255,255);
