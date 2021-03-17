@@ -6,15 +6,6 @@ html, body {
 	cursor: default;
 }
 
-/* prevent the item-dragging not-allowable cursor behavior. not sure if this is better than javascript method e.g. mousedown e.preventDefault(); */
-*, *::after, *::before {
-	cursor: default;
-	user-select: none;
-	-webkit-user-select: none;
-	-webkit-user-drag: none;
-	-webkit-app-region: no-drag;
-}
-
 /* File menu stuff */
 .file-menu-frame {
 	border-bottom: 1px solid rgba(240,240,240);
@@ -32,39 +23,16 @@ html, body {
 	width: 44px;
 	display: inline-block;
 }
-.game-file-menu-frame:hover .menu-game-button {
-	background-color: rgba(209, 226, 242);
-	border: 1px solid rgba(161,197,233);
-}
-.menu-game-button {
-	font-family: 'Segoe UI';
-	font-size: 9pt;
-	width: 100%;
-	text-align: center;
-	/* padding-left: 6px; */
-	border: 1px solid transparent;
-}
-.menu-game-button:hover + div, .menu-game-container:hover {
-	display: inline-block !important;
-	background-color: rgba(245,246,247);
-	position: absolute;
-}
-.menu-game-container {
-	display: none;
-	width: 125px;
-	background-color: rgba(245,246,247);
-	border: 1px solid rgba(204,204,204);
-}
-
-/* Help menu button stuff */
 .help-file-menu-frame {
 	width: 38px;
 	display: inline-block;
 }
+.game-file-menu-frame:hover .menu-game-button,
 .help-file-menu-frame:hover .menu-help-button {
 	background-color: rgba(209, 226, 242);
 	border: 1px solid rgba(161,197,233);
 }
+.menu-game-button,
 .menu-help-button {
 	font-family: 'Segoe UI';
 	font-size: 9pt;
@@ -72,11 +40,13 @@ html, body {
 	text-align: center;
 	border: 1px solid transparent;
 }
+.menu-game-button:hover + div, .menu-game-container:hover,
 .menu-help-button:hover + div, .menu-help-container:hover {
 	display: inline-block !important;
 	background-color: rgba(245,246,247);
 	position: absolute;
 }
+.menu-game-container,
 .menu-help-container {
 	display: none;
 	width: 125px;
@@ -203,6 +173,32 @@ html, body {
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='17' height='17'%3E%3Cstyle%3E%3C!%5BCDATA%5B.B%7Bfill-opacity:0%7D%5D%5D%3E%3C/style%3E%3Cdefs%3E%3Cpath d='M6 0h5v1H6V0z' id='A'/%3E%3Cpath d='M6 16h5v1H6v-1z' id='B'/%3E%3Cpath d='M0 6h1v5H0V6z' id='C'/%3E%3Cpath d='M16 6h1v5h-1V6z' id='D'/%3E%3Cpath d='M4 1h2v1H4V1z' id='E'/%3E%3Cpath d='M11 1h2v1h-2V1z' id='F'/%3E%3Cpath d='M4 15h2v1H4v-1z' id='G'/%3E%3Cpath d='M11 15h2v1h-2v-1z' id='H'/%3E%3Cpath d='M1 4h1v2H1V4z' id='I'/%3E%3Cpath d='M15 4h1v2h-1V4z' id='J'/%3E%3Cpath d='M1 11h1v2H1v-2z' id='K'/%3E%3Cpath d='M15 11h1v2h-1v-2z' id='L'/%3E%3Cpath d='M3 2h1v1H3V2z' id='M'/%3E%3Cpath d='M2 3h1v1H2V3z' id='N'/%3E%3Cpath d='M13 2h1v1h-1V2z' id='O'/%3E%3Cpath d='M14 3h1v1h-1V3z' id='P'/%3E%3Cpath d='M14 13h1v1h-1v-1z' id='Q'/%3E%3Cpath d='M13 14h1v1h-1v-1z' id='R'/%3E%3Cpath d='M2 13h1v1H2v-1z' id='S'/%3E%3Cpath d='M3 14h1v1H3v-1z' id='T'/%3E%3Cpath d='M1 6h15v5H1V6z' id='U'/%3E%3Cpath d='M2 4h13v9H2V4z' id='V'/%3E%3Cpath d='M3 3h11v11H3V3z' id='W'/%3E%3Cpath d='M4 2h9v13H4V2z' id='X'/%3E%3Cpath d='M6 1h5v15H6V1z' id='Y'/%3E%3Cpath d='M4 5h4v3H4V5z' id='Z'/%3E%3Cpath d='M9 5h4v3H9V5z' id='a'/%3E%3Cpath d='M6 12h5v1H6v-1z' id='b'/%3E%3Cpath d='M7 5h3v1H7V5z' id='c'/%3E%3Cpath d='M15 8h1v1h-1V8z' id='d'/%3E%3Cpath d='M5 11h1v1H5v-1z' id='e'/%3E%3Cpath d='M1 8h1v1H1V8z' id='f'/%3E%3Cpath d='M14 7h1v1h-1V7z' id='g'/%3E%3Cpath d='M13 6h1v1h-1V6z' id='h'/%3E%3Cpath d='M2 7h1v1H2V7z' id='i'/%3E%3Cpath d='M3 6h1v1H3V6z' id='j'/%3E%3Cpath d='M12 8h1v1h-1V8z' id='k'/%3E%3Cpath d='M4 8h1v1H4V8z' id='l'/%3E%3Cpath d='M5 7h2v2H5V7z' id='m'/%3E%3Cpath d='M10 7h2v2h-2V7z' id='n'/%3E%3Cpath d='M11 11h1v1h-1v-1z' id='o'/%3E%3C/defs%3E%3Cuse xlink:href='%23A'/%3E%3Cuse xlink:href='%23A' class='B'/%3E%3Cuse xlink:href='%23B'/%3E%3Cuse xlink:href='%23B' class='B'/%3E%3Cuse xlink:href='%23C'/%3E%3Cuse xlink:href='%23C' class='B'/%3E%3Cuse xlink:href='%23D'/%3E%3Cuse xlink:href='%23D' class='B'/%3E%3Cuse xlink:href='%23E'/%3E%3Cuse xlink:href='%23E' class='B'/%3E%3Cuse xlink:href='%23F'/%3E%3Cuse xlink:href='%23F' class='B'/%3E%3Cuse xlink:href='%23G'/%3E%3Cuse xlink:href='%23G' class='B'/%3E%3Cuse xlink:href='%23H'/%3E%3Cuse xlink:href='%23H' class='B'/%3E%3Cuse xlink:href='%23I'/%3E%3Cuse xlink:href='%23I' class='B'/%3E%3Cuse xlink:href='%23J'/%3E%3Cuse xlink:href='%23J' class='B'/%3E%3Cuse xlink:href='%23K'/%3E%3Cuse xlink:href='%23K' class='B'/%3E%3Cuse xlink:href='%23L'/%3E%3Cuse xlink:href='%23L' class='B'/%3E%3Cuse xlink:href='%23M'/%3E%3Cuse xlink:href='%23M' class='B'/%3E%3Cuse xlink:href='%23N'/%3E%3Cuse xlink:href='%23N' class='B'/%3E%3Cuse xlink:href='%23O'/%3E%3Cuse xlink:href='%23O' class='B'/%3E%3Cuse xlink:href='%23P'/%3E%3Cuse xlink:href='%23P' class='B'/%3E%3Cuse xlink:href='%23Q'/%3E%3Cuse xlink:href='%23Q' class='B'/%3E%3Cuse xlink:href='%23R'/%3E%3Cuse xlink:href='%23R' class='B'/%3E%3Cuse xlink:href='%23S'/%3E%3Cuse xlink:href='%23S' class='B'/%3E%3Cuse xlink:href='%23T'/%3E%3Cuse xlink:href='%23T' class='B'/%3E%3Cg fill='%23ff0'%3E%3Cuse xlink:href='%23U'/%3E%3Cuse xlink:href='%23V'/%3E%3Cuse xlink:href='%23W'/%3E%3Cuse xlink:href='%23X'/%3E%3Cuse xlink:href='%23Y'/%3E%3C/g%3E%3Cuse xlink:href='%23Z'/%3E%3Cuse xlink:href='%23Z' class='B'/%3E%3Cuse xlink:href='%23a'/%3E%3Cuse xlink:href='%23a' class='B'/%3E%3Cuse xlink:href='%23b'/%3E%3Cuse xlink:href='%23b' class='B'/%3E%3Cuse xlink:href='%23c'/%3E%3Cuse xlink:href='%23c' class='B'/%3E%3Cuse xlink:href='%23d'/%3E%3Cuse xlink:href='%23d' class='B'/%3E%3Cuse xlink:href='%23e'/%3E%3Cuse xlink:href='%23e' class='B'/%3E%3Cuse xlink:href='%23f'/%3E%3Cuse xlink:href='%23f' class='B'/%3E%3Cuse xlink:href='%23g'/%3E%3Cuse xlink:href='%23g' class='B'/%3E%3Cuse xlink:href='%23h'/%3E%3Cuse xlink:href='%23h' class='B'/%3E%3Cuse xlink:href='%23i'/%3E%3Cuse xlink:href='%23i' class='B'/%3E%3Cuse xlink:href='%23j'/%3E%3Cuse xlink:href='%23j' class='B'/%3E%3Cuse xlink:href='%23k' fill='olive'/%3E%3Cuse xlink:href='%23k' class='B'/%3E%3Cuse xlink:href='%23l' fill='olive'/%3E%3Cuse xlink:href='%23l' class='B'/%3E%3Cuse xlink:href='%23m'/%3E%3Cuse xlink:href='%23m' class='B'/%3E%3Cuse xlink:href='%23n'/%3E%3Cuse xlink:href='%23n' class='B'/%3E%3Cuse xlink:href='%23o'/%3E%3Cuse xlink:href='%23o' class='B'/%3E%3C/svg%3E");
 }
 
+.c1 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cdefs%3E%3Cpath d='M5 0h2v9H5V0z' id='A'/%3E%3Cpath d='M2 8h7v2H2V8z' id='B'/%3E%3Cpath d='M4 1h3v8H4V1z' id='C'/%3E%3Cpath d='M3 2h2v2H3V2z' id='D'/%3E%3Cpath d='M2 3h2v1H2V3z' id='E'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' fill='%2300f'/%3E%3Cuse xlink:href='%23A' fill-opacity='0'/%3E%3Cuse xlink:href='%23B' fill='%2300f'/%3E%3Cuse xlink:href='%23B' fill-opacity='0'/%3E%3Cuse xlink:href='%23C' fill='%2300f'/%3E%3Cuse xlink:href='%23C' fill-opacity='0'/%3E%3Cuse xlink:href='%23D' fill='%2300f'/%3E%3Cuse xlink:href='%23D' fill-opacity='0'/%3E%3Cuse xlink:href='%23E' fill='%2300f'/%3E%3Cuse xlink:href='%23E' fill-opacity='0'/%3E%3C/svg%3E")
+}
+.c2 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cstyle%3E%3C!%5BCDATA%5B.B%7Bfill:green%7D.C%7Bfill-opacity:0%7D%5D%5D%3E%3C/style%3E%3Cdefs%3E%3Cpath d='M0 1h3v2H0V1z' id='A'/%3E%3Cpath d='M1 0h8v2H1V0z' id='B'/%3E%3Cpath d='M7 1h3v3H7V1z' id='C'/%3E%3Cpath d='M0 8h10v2H0V8z' id='D'/%3E%3Cpath d='M0 7h4v2H0V7z' id='E'/%3E%3Cpath d='M1 6h3v2H1V6z' id='F'/%3E%3Cpath d='M3 5h3v2H3V5z' id='G'/%3E%3Cpath d='M5 4h3v2H5V4z' id='H'/%3E%3Cpath d='M7 0h2v5H7V0z' id='I'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' class='B'/%3E%3Cuse xlink:href='%23A' class='C'/%3E%3Cuse xlink:href='%23B' class='B'/%3E%3Cuse xlink:href='%23B' class='C'/%3E%3Cuse xlink:href='%23C' class='B'/%3E%3Cuse xlink:href='%23C' class='C'/%3E%3Cuse xlink:href='%23D' class='B'/%3E%3Cuse xlink:href='%23D' class='C'/%3E%3Cuse xlink:href='%23E' class='B'/%3E%3Cuse xlink:href='%23E' class='C'/%3E%3Cuse xlink:href='%23F' class='B'/%3E%3Cuse xlink:href='%23F' class='C'/%3E%3Cuse xlink:href='%23G' class='B'/%3E%3Cuse xlink:href='%23G' class='C'/%3E%3Cuse xlink:href='%23H' class='B'/%3E%3Cuse xlink:href='%23H' class='C'/%3E%3Cuse xlink:href='%23I' class='B'/%3E%3Cuse xlink:href='%23I' class='C'/%3E%3C/svg%3E")
+}
+.c3 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cdefs%3E%3Cpath d='M0 0h9v2H0V0z' id='A'/%3E%3Cpath d='M0 8h9v2H0V8z' id='B'/%3E%3Cpath d='M3 4h6v2H3V4z' id='C'/%3E%3Cpath d='M7 1h3v3H7V1z' id='D'/%3E%3Cpath d='M7 6h3v3H7V6z' id='E'/%3E%3Cpath d='M7 0h2v9H7V0z' id='F'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' fill='red'/%3E%3Cuse xlink:href='%23A' fill-opacity='0'/%3E%3Cuse xlink:href='%23B' fill='red'/%3E%3Cuse xlink:href='%23B' fill-opacity='0'/%3E%3Cuse xlink:href='%23C' fill='red'/%3E%3Cuse xlink:href='%23C' fill-opacity='0'/%3E%3Cuse xlink:href='%23D' fill='red'/%3E%3Cuse xlink:href='%23D' fill-opacity='0'/%3E%3Cuse xlink:href='%23E' fill='red'/%3E%3Cuse xlink:href='%23E' fill-opacity='0'/%3E%3Cuse xlink:href='%23F' fill='red'/%3E%3Cuse xlink:href='%23F' fill-opacity='0'/%3E%3C/svg%3E")
+}
+.c4 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cdefs%3E%3Cpath d='M6 0h3v10H6V0z' id='A'/%3E%3Cpath d='M0 4h10v2H0V4z' id='B'/%3E%3Cpath d='M1 2h3v3H1V2z' id='C'/%3E%3Cpath d='M2 0h3v2H2V0z' id='D'/%3E%3Cpath d='M2 1.23h2v4H2v-4z' id='E'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' fill='navy'/%3E%3Cuse xlink:href='%23A' fill-opacity='0'/%3E%3Cuse xlink:href='%23B' fill='navy'/%3E%3Cuse xlink:href='%23B' fill-opacity='0'/%3E%3Cuse xlink:href='%23C' fill='navy'/%3E%3Cuse xlink:href='%23C' fill-opacity='0'/%3E%3Cuse xlink:href='%23D' fill='navy'/%3E%3Cuse xlink:href='%23D' fill-opacity='0'/%3E%3Cuse xlink:href='%23E' fill='navy'/%3E%3Cuse xlink:href='%23E' fill-opacity='0'/%3E%3C/svg%3E")
+}
+.c5 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cdefs%3E%3Cpath d='M0 0h10v2H0V0z' id='A'/%3E%3Cpath d='M0 0h3v6H0V0z' id='B'/%3E%3Cpath d='M0 4h9v2H0V4z' id='C'/%3E%3Cpath d='M0 8h9v2H0V8z' id='D'/%3E%3Cpath d='M7 5h3v4H7V5z' id='E'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' fill='maroon'/%3E%3Cuse xlink:href='%23A' fill-opacity='0'/%3E%3Cuse xlink:href='%23B' fill='maroon'/%3E%3Cuse xlink:href='%23B' fill-opacity='0'/%3E%3Cuse xlink:href='%23C' fill='maroon'/%3E%3Cuse xlink:href='%23C' fill-opacity='0'/%3E%3Cuse xlink:href='%23D' fill='maroon'/%3E%3Cuse xlink:href='%23D' fill-opacity='0'/%3E%3Cuse xlink:href='%23E' fill='maroon'/%3E%3Cuse xlink:href='%23E' fill-opacity='0'/%3E%3C/svg%3E")
+}
+.c6 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cdefs%3E%3Cpath d='M1 0h8v2H1V0z' id='A'/%3E%3Cpath d='M1 4h8v2H1V4z' id='B'/%3E%3Cpath d='M1 8h8v2H1V8z' id='C'/%3E%3Cpath d='M0 1h3v8H0V1z' id='D'/%3E%3Cpath d='M7 5h3v4H7V5z' id='E'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' fill='teal'/%3E%3Cuse xlink:href='%23A' fill-opacity='0'/%3E%3Cuse xlink:href='%23B' fill='teal'/%3E%3Cuse xlink:href='%23B' fill-opacity='0'/%3E%3Cuse xlink:href='%23C' fill='teal'/%3E%3Cuse xlink:href='%23C' fill-opacity='0'/%3E%3Cuse xlink:href='%23D' fill='teal'/%3E%3Cuse xlink:href='%23D' fill-opacity='0'/%3E%3Cuse xlink:href='%23E' fill='teal'/%3E%3Cuse xlink:href='%23E' fill-opacity='0'/%3E%3C/svg%3E")
+}
+.c7 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cstyle%3E%3C!%5BCDATA%5B.B%7Bfill-opacity:0%7D%5D%5D%3E%3C/style%3E%3Cdefs%3E%3Cpath d='M0 0h10v2H0V0z' id='A'/%3E%3Cpath d='M7 0h3v4H7V0z' id='B'/%3E%3Cpath d='M6 3.98h3v2H6v-2z' id='C'/%3E%3Cpath d='M4.99 6.01l3-.03.01 2-3 .03-.01-2z' id='D'/%3E%3Cpath d='M4 8h3v2H4V8z' id='E'/%3E%3Cpath d='M7 2h2v3H7V2z' id='F'/%3E%3Cpath d='M6 4.79h2v3H6v-3z' id='G'/%3E%3Cpath d='M5 6.7h2v3H5v-3z' id='H'/%3E%3C/defs%3E%3Cuse xlink:href='%23A'/%3E%3Cuse xlink:href='%23A' class='B'/%3E%3Cuse xlink:href='%23B'/%3E%3Cuse xlink:href='%23B' class='B'/%3E%3Cuse xlink:href='%23C'/%3E%3Cuse xlink:href='%23C' class='B'/%3E%3Cuse xlink:href='%23D'/%3E%3Cuse xlink:href='%23D' class='B'/%3E%3Cuse xlink:href='%23E'/%3E%3Cuse xlink:href='%23E' class='B'/%3E%3Cuse xlink:href='%23F'/%3E%3Cuse xlink:href='%23F' class='B'/%3E%3Cuse xlink:href='%23G'/%3E%3Cuse xlink:href='%23G' class='B'/%3E%3Cuse xlink:href='%23H'/%3E%3Cuse xlink:href='%23H' class='B'/%3E%3C/svg%3E")
+}
+.c8 {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cstyle%3E%3C!%5BCDATA%5B.B%7Bfill:gray%7D.C%7Bfill-opacity:0%7D%5D%5D%3E%3C/style%3E%3Cdefs%3E%3Cpath d='M1 0h8v2H1V0z' id='A'/%3E%3Cpath d='M1 4h8v2H1V4z' id='B'/%3E%3Cpath d='M1 8h8v2H1V8z' id='C'/%3E%3Cpath d='M7 6h3v3H7V6z' id='D'/%3E%3Cpath d='M7 1h3v3H7V1z' id='E'/%3E%3Cpath d='M0 1h3v3H0V1z' id='F'/%3E%3Cpath d='M0 6h3v3H0V6z' id='G'/%3E%3Cpath d='M1 2.82h2v4H1v-4z' id='H'/%3E%3Cpath d='M7 2.82h2v4H7v-4z' id='I'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' class='B'/%3E%3Cuse xlink:href='%23A' class='C'/%3E%3Cuse xlink:href='%23B' class='B'/%3E%3Cuse xlink:href='%23B' class='C'/%3E%3Cuse xlink:href='%23C' class='B'/%3E%3Cuse xlink:href='%23C' class='C'/%3E%3Cuse xlink:href='%23D' class='B'/%3E%3Cuse xlink:href='%23D' class='C'/%3E%3Cuse xlink:href='%23E' class='B'/%3E%3Cuse xlink:href='%23E' class='C'/%3E%3Cuse xlink:href='%23F' class='B'/%3E%3Cuse xlink:href='%23F' class='C'/%3E%3Cuse xlink:href='%23G' class='B'/%3E%3Cuse xlink:href='%23G' class='C'/%3E%3Cuse xlink:href='%23H' class='B'/%3E%3Cuse xlink:href='%23H' class='C'/%3E%3Cuse xlink:href='%23I' class='B'/%3E%3Cuse xlink:href='%23I' class='C'/%3E%3C/svg%3E")
+}
+	
+
 .smiley-frame {
 	border: 1px solid rgba(128,128,128);
 }
@@ -237,21 +233,18 @@ html, body {
 	flex: 1;
 	justify-content: flex-start;
   align-items: center;
-	/* border: 1px solid red; */
 }
 .scoreboard-content-middle {
 	display: flex;
 	flex: 1;
 	justify-content: center;
   align-items: center;
-	/* border: 1px solid red; */
 }
 .scoreboard-content-right {
 	display: flex;
 	flex: 1;
 	justify-content: flex-end;
   align-items: center;
-	/* border: 1px solid red; */
 }
 
 .scoreboard-digits-container {
@@ -264,7 +257,6 @@ html, body {
 	border-right: 1px solid rgba(255,255,255);
 	border-bottom: 1px solid rgba(255,255,255);
 }
-
 .scoreboard-digit-panel {
 	height: 21px;
 	width: 11px;
@@ -283,11 +275,160 @@ html, body {
 .y7 {
 	background-color: transparent;
 }
-
 .the-red {
 	background-color: red !important;
 }
 
+/* Menu feature stuff */
+.feature-content-frame {
+	border-top: 1px solid rgba(227,227,227);
+	border-left: 1px solid rgba(227,227,227);
+	border-right: 1px solid rgba(105,105,105);
+	border-bottom: 1px solid rgba(105,105,105);
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 8pt;
+	width: 146px;
+	position: absolute;
+	display: none;
+}
+.feature-content {
+	border-top: 1px solid rgba(255,255,255);
+	border-left: 1px solid rgba(255,255,255);
+	border-right: 1px solid rgba(160,160,160);
+	border-bottom: 1px solid rgba(160,160,160);
+	background-color: rgba(240,240,240);
+	padding: 5px;
+}
+.feature-content-enabled {
+	display: block !important;
+}
+
+/* Custom game field stuff */
+.content-custom-game {	
+	width: 100%;
+	height: 100%;
+	display: none;
+  grid-template-columns: auto auto;
+  grid-template-rows: 30px 1fr;
+	gap: 5px;
+}
+.content-custom-game-enabled {
+	display: grid !important;
+}
+.content-custom-game-header {
+  grid-column: 1 / 3;
+	grid-row: 1;
+	place-self: center;
+}
+.content-custom-game-settings {
+  grid-column: 1;
+  grid-row: 2;
+	place-self: center;
+}
+.content-custom-game-settings > div {
+	display: grid;
+	grid-template-rows: auto auto auto;
+	grid-template-columns: auto auto;
+	gap: 5px 5px;
+}
+input.custom-game-field {
+	width: 40px;
+}
+.content-custom-game-buttons {
+  grid-column: 2;
+  grid-row: 2;
+	place-self: center;
+}
+.content-custom-game-buttons > button {
+	width: 100%;
+	padding: 0px;
+	height: 25px;
+	margin-bottom: 5px;
+}
+.content-custom-game-buttons > button:first-child {
+	height: 40px;
+}
+
+.content-best-times {
+	width: 100%;
+	height: 100%;
+	display: none;
+  grid-template-columns: auto;
+  grid-template-rows: 30px auto auto;
+	gap: 5px;
+}
+.content-best-times-enabled {
+	display: grid !important;
+}
+.content-best-times-header {
+  grid-column: 1;
+	grid-row: 1;
+	place-self: center;
+}
+.content-best-times-table {
+  grid-column: 1;
+  grid-row: 2;
+	place-self: center;
+}
+.content-custom-game-table > div {
+	display: grid;
+/* 	grid-template-rows: auto auto auto;
+	grid-template-columns: auto auto; */
+	gap: 5px 5px;
+}
+.content-best-times-buttons {
+	width: 100%;
+  grid-column: 1;
+  grid-row: 3;
+	place-self: center;
+}
+.content-best-times-buttons > div {
+	display: grid;
+}
+.content-best-times-buttons > div > button:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+	place-self: center;
+	white-space: nowrap;
+}
+.content-best-times-buttons > div > button:nth-child(2) {
+  grid-column: 2;
+  grid-row: 1;
+	place-self: center;
+}
+
+.content-best-time-game {
+	width: 100%;
+	height: 100%;
+	display: none;
+  grid-template-columns: auto;
+  grid-template-rows: auto auto auto;
+	gap: 10px;
+}
+.content-best-time-game-enabled {
+	display: grid !important;
+}
+.content-best-time-game-header {
+  grid-column: 1;
+	grid-row: 1;
+	place-self: center;
+}
+.content-best-time-game-input {
+  grid-column: 1;
+  grid-row: 2;
+	place-self: center;
+}
+.content-best-time-game-input > input {
+	width: 111px;
+}
+.content-best-time-game-buttons {
+  grid-column: 1;
+  grid-row: 3;
+	place-self: center;
+}
+.content-best-time-game-buttons > button {
+	width: 52px;
+}
 
 /* test */
 
