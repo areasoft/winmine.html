@@ -1,0 +1,112 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>svg-to-data-url</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script type = "text/javascript">
+
+create_string = function(file_list) {
+		let promises = [];
+		for (let file of file_list) {
+				file_names.push(file.name);
+				let filePromise = new Promise(resolve => {
+						let reader = new FileReader();
+						reader.readAsText(file);
+						reader.onload = () => resolve(reader.result);
+				});
+				promises.push(filePromise);
+		}
+		Promise.all(promises).then(file_content => {
+			const output_array = [];
+			for(let i = 0; i < file_content.length; i += 1) {
+				/* white space */
+				let as_url = file_content[i].replace(/\s+/g,' ');
+				/* I don't actually know the url encoding rules so this is probably roundabout, using encodeURIComponent then putting back characters that worked when tested */
+				as_url = encodeURIComponent(as_url);
+				as_url = as_url.replaceAll('%20',' ').replaceAll('%2C',',').replaceAll('%3A',':').replaceAll('%3B',';').replaceAll('%2F','/').replaceAll('%22','\'').replaceAll('%3D','=').replaceAll('%0D','').replaceAll('%0A','').replaceAll('%09','');
+				output_array.push(file_names[i] + ' {\n' + 'background-image: url("data:image/svg+xml,' + as_url + '")\n}\n');
+			}
+			document.querySelectorAll('textarea')[0].value = output_array.join('');
+		});
+	}
+
+var file_names = [];
+var file_text = [];
+document.addEventListener('DOMContentLoaded', function() {
+
+	function dragenter(e) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+
+	function dragover(e) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+
+	function drop(e) {
+		e.stopPropagation();
+		e.preventDefault();
+		const dt = e.dataTransfer;
+		const files = dt.files;
+		create_string(files);
+/* 		for (let i = 0, numFiles = files.length; i < numFiles; i++) {
+			let file = files[i];
+			file_names.push(file.name);
+			let reader = new FileReader();
+			reader.onload = function() {
+    		file_text.push(reader.result);
+  		}
+			reader.readAsText(file);
+		} */
+	}
+
+	let dropbox;
+	dropbox = document.getElementById("dropbox");
+	dropbox.addEventListener("dragenter", dragenter, false);
+	dropbox.addEventListener("dragover", dragover, false);
+	dropbox.addEventListener("drop", drop, false);
+
+	/* const output_array = [];
+	for(let i = 0; i < file_names.length; i += 1) {
+		console.log(file_names[i] + ' {\n' + 'background-image: url(' + file_text[i] + '\n}\n');
+		//output_array.push(encodeURIComponent());
+	} */
+
+});
+
+
+/* encodeURIComponent('test?'); */
+
+/* 	var create = document.getElementById('create'),
+    textbox = document.getElementById('textbox');
+
+  create.addEventListener('click', function () {
+    var link = document.createElement('a');
+    link.setAttribute('download', 'info.txt');
+    link.href = makeTextFile(textbox.value);
+    document.body.appendChild(link);
+
+    // wait for the link to be added to the document
+    window.requestAnimationFrame(function () {
+      var event = new MouseEvent('click');
+      link.dispatchEvent(event);
+      document.body.removeChild(link);
+    });
+
+  }, false); */
+	
+</script>
+</head>
+<body>
+
+<div id="dropbox" style="width:100vw; height:100vh;">
+	<div>Drag .svg files into this browser window</div>
+	<div><textarea></textarea></div>
+</div>
+
+
+
+</body>
+</html>
