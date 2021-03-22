@@ -175,6 +175,9 @@ winmine.init_timer = function() {
 }
 
 winmine.set_mine_counter = function(remaining_mines) {
+	if(remaining_mines > 999) {
+		remaining_mines = 999;
+	}
 	remaining_mines = remaining_mines.toString();
 	if(remaining_mines.charAt(0) === '-') {
 		remaining_mines = '-'.concat(remaining_mines.substring(1).padStart(2, '0'));
@@ -310,7 +313,7 @@ winmine.fill_cell_container = function(height, width) {
 	winmine.backup_mine = (winmine.cells.filter(x => !winmine.mines.includes(x)))[winmine.random(1, ((winmine.height*winmine.width)-winmine.mine_count))-1]
 }
 
-winmine.choose_cell = function(cell_html_id) {
+winmine.choose_cell = function(cell_html_id, is_multi_cell = false) {
 	if(performance.getEntriesByName('game_start').length === 0) {
 		performance.mark('game_start');
 		winmine.timer_worker = new Worker(URL.createObjectURL(winmine.start_timer_function_blob));
@@ -374,8 +377,8 @@ winmine.choose_cell = function(cell_html_id) {
 			const cell_element2 = document.getElementById('cell_'+cell_id_string2);
 			const neighboring_cells2 = winmine.get_array_of_neighbor_cells(cell_id_string2);
 			const neighboring_mines2 = winmine.get_array_of_neighboring_mines(neighboring_cells2);
-			/* skip evaluating right-clicked cells */
-			if(winmine.flagged_cells.includes(cell_id_string2) || winmine.marked_cells.includes(cell_id_string2)) {
+			if(winmine.flagged_cells.includes(cell_id_string2)) {
+				/* skip evaluating flagged cells */
 				continue;
 			}
 			winmine.triggered_cells.push(cell_id_string2);
@@ -514,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 
-	/* prevent right click on everything below file menu */
+	/* prevent default right click on everything below file menu */
 	document.querySelector('.game-window-frame').addEventListener('contextmenu', function(event) {
 		event.preventDefault();
 	});
@@ -523,27 +526,53 @@ document.addEventListener('DOMContentLoaded', function() {
 	const cell_container = document.getElementsByClassName('cell-container')[0];
 	cell_container.addEventListener('mouseover', function(event) {
 		if(winmine.game_over) { return; }
+		if(winmine.mouse_is_down && winmine.mouse2_is_down) {
+			const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+			document.querySelectorAll('#cell_' + neighboring_cells.join(':not(.flagged-cell),#cell_') + ':not(.flagged-cell)').forEach(function (element) {
+				element.classList.add('active-cell');
+			});
+			if(!event.target.classList.contains('flagged-cell')) {
+				event.target.classList.add('active-cell');
+			}
+		}
 		if(event.target.classList.contains('flagged-cell')) { return; }
 		if(event.target.classList.contains('marked-cell')) { return; }
-		if(winmine.mouse_is_down) {
+		if(winmine.mouse_is_down && !winmine.multi_cell) {
 			event.target.classList.add('active-cell');
 		}
 	});
 	cell_container.addEventListener('mouseout', function(event) {
 		if(winmine.game_over) { return; }
+		if(winmine.mouse_is_down && winmine.mouse2_is_down) {
+			const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+			document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
+				element.classList.remove('active-cell');
+			});
+		}
 		if(event.target.classList.contains('flagged-cell')) { return; }
 		if(event.target.classList.contains('marked-cell')) { return; }
 		event.target.classList.remove('active-cell');
 	});
 	cell_container.addEventListener('mousedown', function(event) {
 		if(winmine.game_over) { return; }
-		if(event.button === 2) {
-			if(winmine.mouse_is_down) { return; }
+		if(event.button === 0) { winmine.mouse_is_down = true; }
+		if(event.button === 2) { winmine.mouse2_is_down = true; }
+		if(winmine.mouse_is_down && winmine.mouse2_is_down) {
+			const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+			document.querySelectorAll('#cell_' + neighboring_cells.join(':not(.flagged-cell),#cell_') + ':not(.flagged-cell)').forEach(function (element) {
+				element.classList.add('active-cell');
+			});
+			if(!event.target.classList.contains('flagged-cell')) {
+				event.target.classList.add('active-cell');
+			}
+			winmine.multi_cell = true;
+		}
+		if(winmine.mouse2_is_down) {
+			if(winmine.mouse_is_down) { return;	}
 			if(event.target.classList.contains('triggered-cell')) { return; }
 			winmine.flag_cell(event.target.id);
 			return;
 		}
-		winmine.mouse_is_down = true;
 		if(event.target.classList.contains('flagged-cell')) { return; }
 		if(event.target.classList.contains('marked-cell')) { return; }
 		if(!event.target.classList.contains('triggered-cell')) {
@@ -552,10 +581,42 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 	cell_container.addEventListener('mouseup', function(event) {
 		if(winmine.game_over) { return; }
+		/* most of mouseup is managing the two ways two clear cell(s), direct click or left+right indirect click */
+		if(event.button === 0) { winmine.mouse_is_down = false; }
+		if(event.button === 2) { winmine.mouse2_is_down = false; }
+		if(winmine.multi_cell) {
+			if(event.target.classList.length >= 2) {
+				const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+				const flagged_neighboring_cells = [];
+				document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
+					if(element.classList.contains('flagged-cell')) {
+						flagged_neighboring_cells.push(element.id.substring(5));
+					}
+					element.classList.remove('active-cell');
+				});
+				if(flagged_neighboring_cells.length == event.target.classList[1].substring(1)) {
+					const cells_to_choose = neighboring_cells.filter(x => !flagged_neighboring_cells.includes(x));
+					cells_to_choose.forEach(function (element) {
+						winmine.choose_cell('cell_'+element);
+						document.getElementById('cell_'+element).classList.remove('marked-cell'); /* marked cells are triggered like normal cells. remove class to prevent confusion */
+					});
+				}
+			} else {
+				const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+				document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
+					element.classList.remove('active-cell');
+				});
+			}
+			event.target.classList.remove('active-cell');
+			if(!winmine.mouse_is_down && !winmine.mouse2_is_down) {
+				winmine.multi_cell = false;
+			}
+			return;
+		}
 		if(event.button === 2) { return; }
 		if(event.target.classList.contains('flagged-cell')) { return; }
 		if(event.target.classList.contains('marked-cell')) { return; }
-		//winmine.mouse_is_down = false;
+		//if(!event.target.classList.contains('active-cell')) { return; }
 		event.target.classList.remove('active-cell');
 		winmine.choose_cell(event.target.id);
 	});
@@ -599,7 +660,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		if(event.target.nodeName !== "INPUT") {
 			event.preventDefault(); /* prevent browser from displaying the 'not allowable' cursor and trying to html draggable-item things */
 		}
-		if(event.button === 2) { return; }
+		if(event.button === 2 && !winmine.multi_cell) { return; }
 		if(winmine.game_over === false && !event.target.classList.contains('smiley-container')) {
 			smiley_frame.classList.remove('face-neutral');
 			smiley_frame.classList.add('face-cursor-down');
@@ -611,9 +672,11 @@ document.addEventListener('DOMContentLoaded', function() {
 		winmine.mouse_is_down = false;
 	});
 	document.body.addEventListener('mouseup', function(event) {
-		if(event.button === 2) { return; }
-		winmine.mouse_is_down = false;
-		winmine.mouse_is_down_smiley = false;
+		if(event.button === 2 && !winmine.multi_cell) { return; }
+		if(event.button === 0) {
+			winmine.mouse_is_down = false;
+			winmine.mouse_is_down_smiley = false;
+		}
 		if(winmine.game_over === false) {
 			smiley_frame.classList.remove('face-cursor-down');
 			smiley_frame.classList.add('face-neutral');
@@ -632,7 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		if(width  > 120) { width = 120; }
 		if(mines/(height*width) < .09)  { mines = Math.round((height*width)*.09) }
 		if(mines/(height*width) > .945) { mines = Math.round((height*width)*.945) }
-		if(mines > 999) { mines = 999; }
+		if(mines > 9999) { mines = 9999; }
 		localStorage.setItem('custom_field_settings', JSON.stringify([height, width, mines]));
 		const new_window_salt = winmine.random(100000,999999);
 		const window_width = (width*16)+20;
