@@ -14,15 +14,15 @@
 			<div class="game-file-menu-frame">
 				<div class="menu-game-button">Game</div>
 				<div class="menu-game-container">
-					<div class="menu-item" data-name="New">New</div>
+					<div class="menu-item" data-name="New">New<div>F5</div></div>
 					<div class="menu-item-separator"></div>
 					<div class="menu-item" data-name="Beginner">Beginner</div>
 					<div class="menu-item" data-name="Intermediate">Intermediate</div>
 					<div class="menu-item" data-name="Expert">Expert</div>
 					<div class="menu-item" data-name="Custom...">Custom...</div>
 					<div class="menu-item-separator"></div>
-					<div class="menu-item not-available" data-name="Marks (?)">Marks (?)</div>
-					<div class="menu-item menu-mark not-available" data-name="Color">Color</div>
+					<div class="menu-item" data-name="Marks (?)">Marks (?)</div>
+					<div class="menu-item" data-name="Color">Color</div>
 					<div class="menu-item not-available" data-name="Sound">Sound</div>
 					<div class="menu-item-separator"></div>
 					<div class="menu-item not-available" data-name="Best Times...">Best Times...</div>
@@ -37,7 +37,14 @@
 					<div class="menu-item-separator"></div>
 					<div class="menu-item" data-name="About Minesweeper...">About Minesweeper...</div>
 					<div class="menu-item-separator"></div>
-					<div class="menu-item" data-name="Advanced Menu">Advanced Menu</div>
+					<div class="menu-item" data-name="Extra Menu*">Extra Menu*</div>
+				</div>
+			</div>
+			<div class="extra-menu-frame">
+				<div class="menu-extra-button">Extra</div>
+				<div class="menu-extra-container">
+					<div class="menu-item" data-name="Game History">Game History</div>
+					<div class="menu-item" data-name="Settings">Settings</div>
 				</div>
 			</div>
 			<div class="feature-content-frame">
@@ -48,7 +55,7 @@
 							<div>
 								<div>Height:</div><div><input type="number" min="6" max="120" class="custom-game-field"></div>
 								<div>Width:</div><div><input type="number" min="6" max="120" class="custom-game-field"></div>
-								<div>Mines:</div><div><input type="number" min="4" max="9999" class="custom-game-field"></div>
+								<div>Mines:</div><div><input type="number" min="1" max="9999" class="custom-game-field"></div>
 							</div>
 						</div>
 						<div class="content-custom-game-buttons"><button>OK</button><button>Cancel</button></div>
@@ -66,6 +73,14 @@
 						<div class="content-best-time-game-buttons">
 							<button>OK</button>
 						</div>
+					</div>
+					<div class="content-settings">
+						<div class="content-settings-header"></div>
+						<div class="content-settings-grid"></div>
+					</div>
+					<div class="content-history">
+						<div class="content-history-header"></div>
+						<div class="content-history-grid"></div>
 					</div>
 				</div>
 			</div>

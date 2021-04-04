@@ -6,46 +6,25 @@ winmine.height = 8;
 winmine.width = 8;
 winmine.mine_count = 10;
 
-winmine.get_array_of_neighbor_cells = function(cell_id_string) {
-	const triggered_cell = cell_id_string.split('_');
-	const triggered_cell_row = parseInt(triggered_cell[0], 10);
-	const triggered_cell_col = parseInt(triggered_cell[1], 10);
-	const top_left			= [triggered_cell_row - 1, triggered_cell_col - 1];
-	const top_middle		= [triggered_cell_row - 1, triggered_cell_col];
-	const top_right			= [triggered_cell_row - 1, triggered_cell_col + 1];
-	const middle_left		= [triggered_cell_row, triggered_cell_col - 1];
-	/* middle_self			= [triggered_cell_row, triggered_cell_col]; */
-	const middle_right	= [triggered_cell_row, triggered_cell_col + 1];
-	const bottom_left		= [triggered_cell_row + 1, triggered_cell_col - 1];
-	const bottom_middle	= [triggered_cell_row + 1, triggered_cell_col];
-	const bottom_right	= [triggered_cell_row + 1, triggered_cell_col + 1];
-	const neighbor_cell_array = [top_left, top_middle, top_right, middle_left, middle_right, bottom_left, bottom_middle, bottom_right];
-	const return_array = [];
-	for (let i = 0; i < neighbor_cell_array.length; i += 1) {
-		const cell_positions = neighbor_cell_array[i];
-		const cell_string = cell_positions.join('_');
-		const cell_position_row = cell_positions[0];
-		const cell_position_col = cell_positions[1];
-		if(cell_position_row >= 0
-			&& cell_position_row < winmine.height
-			&& cell_position_col >= 0
-			&& cell_position_col < winmine.width
-			&& !winmine.triggered_cells.includes(cell_string)) /* decide here not to return already-triggered cells */
-		{
-			return_array.push(cell_string);
-		}
-	}
-	return(return_array);
-}
-
-winmine.get_array_of_neighboring_mines = function(array_of_neighbor_cells) {
-	const neighbor_mines = [];
-	for (let i = 0; i < array_of_neighbor_cells.length; i += 1) {
-		if(winmine.mines.includes(array_of_neighbor_cells[i])) {
-			neighbor_mines.push(array_of_neighbor_cells[i]);
-		}
-	}
-	return(neighbor_mines);
+winmine.get_array_of_neighbor_ids = function(y, x) {
+	const neighbor_ids = [];
+	if(y!=0 && x!=0) {
+		neighbor_ids.push((y-1)+'_'+(x-1)); }
+	if(y!=0) {
+		neighbor_ids.push((y-1)+'_'+(x)); }
+	if(y!=0 && x!=winmine.x_ceil) {
+		neighbor_ids.push((y-1)+'_'+(x+1)); }
+	if(x!=0) {
+		neighbor_ids.push((y)+'_'+(x-1)); }
+	if(x!=winmine.x_ceil) {
+		neighbor_ids.push((y)+'_'+(x+1)); }
+	if(y!=winmine.y_ceil && x!=0) {
+		neighbor_ids.push((y+1)+'_'+(x-1)); }
+	if(y!=winmine.y_ceil) {
+		neighbor_ids.push((y+1)+'_'+(x)); }
+	if(y!=winmine.y_ceil && x!=winmine.x_ceil) {
+		neighbor_ids.push((y+1)+'_'+(x+1)); }
+	return(neighbor_ids);
 }
 
 winmine.random = function(min, max) {
@@ -74,21 +53,42 @@ winmine.load_config = function() {
 winmine.set_file_menu_item_marks = function() {
 	let game_is_custom = true;
 	if(winmine.height === 8 && winmine.width === 8 && winmine.mine_count === 10) {
-		document.querySelectorAll('.menu-item[data-name=\'Beginner\']')[0].classList.add('menu-mark');
+		document.querySelector('.menu-item[data-name=\'Beginner\']').classList.add('menu-mark');
 		game_is_custom = false;
 	}
 	if(winmine.height === 16 && winmine.width === 16 && winmine.mine_count === 40) {
-		document.querySelectorAll('.menu-item[data-name=\'Intermediate\']')[0].classList.add('menu-mark');
+		document.querySelector('.menu-item[data-name=\'Intermediate\']').classList.add('menu-mark');
 		game_is_custom = false;
 	}
 	if(winmine.height === 16 && winmine.width === 30 && winmine.mine_count === 99) {
-		document.querySelectorAll('.menu-item[data-name=\'Expert\']')[0].classList.add('menu-mark');
+		document.querySelector('.menu-item[data-name=\'Expert\']').classList.add('menu-mark');
 		game_is_custom = false;
 	}
 	if(game_is_custom) {
-		document.querySelectorAll('.menu-item[data-name=\'Custom...\']')[0].classList.add('menu-mark');
+		document.querySelector('.menu-item[data-name=\'Custom...\']').classList.add('menu-mark');
 	}
-	document.querySelectorAll('.menu-item[data-name=\'Marks (?)\']')[0].classList.add('menu-mark');
+	if(localStorage.getItem('setting_marks') === null) {
+		winmine.marks = true; /* winmine.exe default */
+	} else {
+		winmine.marks = (localStorage.getItem('setting_marks') === 'true') ? true : false;
+	}
+	if(winmine.marks) {
+		document.querySelector('.menu-item[data-name=\'Marks (?)\']').classList.add('menu-mark');
+	}
+	if(localStorage.getItem('setting_color') === null) {
+		winmine.color = true; /* winmine.exe default */
+	} else {
+		winmine.color = (localStorage.getItem('setting_color') === 'true') ? true : false;
+	}
+	if(winmine.color) {
+		document.querySelector('.menu-item[data-name=\'Color\']').classList.add('menu-mark');
+	} else {
+		document.documentElement.style.setProperty('filter', 'grayscale(100%)');
+	}
+	if(localStorage.getItem('setting_extra_menu') === 'true') {
+		document.querySelector('.menu-item[data-name=\'Extra Menu*\']').classList.add('menu-mark');
+		document.getElementsByClassName('extra-menu-frame')[0].style.display = 'inline-block';
+	}
 }
 
 /* The counter and timer are 3 length elements, where each element is a literal "seven segment display" of 21x11 pixels: each pixel cell is assigned its A-G character position with css classes that can be toggled. */
@@ -194,12 +194,7 @@ winmine.set_mine_counter = function(remaining_mines) {
 	winmine.counter = remaining_mines;
 }
 
-
 winmine.start_timer = async function() {
-/* 	self.onmessage = function(e) {
-  	console.log('Message received from main script');
-		console.log(e);
-	} */
 	this.sleep = function(ms) {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	}
@@ -231,8 +226,8 @@ winmine.set_timer = function(new_timer) {
 	}
 }
 
-/* some smaller data are stored in the key so we can do some searching without opening every saved storage value item */
-/* key: pipe-separated array ex: 'w|height,width,mines|game_duration|game_end_time' */
+/* some smaller data are stored in the key so we can do some searching without looping through storage values */
+/* key: pipe-separated array ex: 'w|height,width,mines|3BV|game_duration|game_end_time' */
 /* value: stringify array 1st item is name, 2nd item is mine cell positions, 3rd item is game_clicks array, a 3-length array of user game cell actions: duration,action,cell_id */
 winmine.save_record = function() {
 	const game_config = [winmine.height, winmine.width, winmine.mine_count].toString();
@@ -246,14 +241,14 @@ winmine.save_record = function() {
 	const keys_to_search = Object.keys({ ...localStorage }).filter(value => 'w' + value.split('|')[1] === 'w' + game_config);
 	let records_beat = 0;
 	keys_to_search.forEach(function(item) {
-		if(winmine.game_duration < parseInt(item.split('|')[2])) {
+		if(winmine.game_duration < parseInt(item.split('|')[3])) {
 			records_beat = records_beat + 1;
 		}
 	});
 	const is_best_time = records_beat === keys_to_search.length;
 	/* set this function up so we can save record before prompting for a name, and then save again if we get a name */
 	winmine.save_record_name = function(name) {
-		const storage_key = game_win_loss + '|' + game_config + '|' + winmine.game_duration + '|' + winmine.game_end_time;
+		const storage_key = game_win_loss + '|' + game_config + '|' + winmine._3bv + '|' + winmine.game_duration + '|' + winmine.game_end_time;
 		const storage_value = JSON.stringify([name, winmine.mines, winmine.game_clicks]);
 		localStorage.setItem(storage_key, storage_value);
 	}
@@ -280,40 +275,200 @@ winmine.get_game_duration = function(round_to) {
 	return(duration);
 }
 
-winmine.fill_cell_container = function(height, width) {
-	/* create global cells index, an array of row column ids (row_col) */
-	winmine.cells = [];
-	for (let row = 0; row < height; row += 1) {
-		for (let col = 0; col < width; col += 1) {
-			winmine.cells.push([row, col].join('_'));
+/* TODO: stop bothering with "cell_" prefix since html ids don't care about starting with int */
+winmine.id_as_y_x = function(id_string) {
+	const as_array = id_string.substring(5).split('_');
+	return([parseInt(as_array[0]), parseInt(as_array[1])]);
+}
+
+/* used when replacing cell values when a mine is moved (first click) */
+winmine.get_neighbor_mine_freq = function(y, x) {
+	let num = 0;
+	if(y!=0 && x!=0 && winmine.cells[y-1][x-1]==9) {
+		num++; }
+	if(y!=0 && winmine.cells[y-1][x]==9) {
+		num++; }
+	if(y!=0 && x!=winmine.x_ceil && winmine.cells[y-1][x+1]==9) {
+		num++; }
+	if(x!=0 && winmine.cells[y][x-1]==9) {
+		num++; }
+	if(x!=winmine.x_ceil && winmine.cells[y][x+1]==9) {
+		num++; }
+	if(y!=winmine.y_ceil && x!=0 && winmine.cells[y+1][x-1]==9) {
+		num++; }
+	if(y!=winmine.y_ceil && winmine.cells[y+1][x]==9) {
+		num++; }
+	if(y!=winmine.y_ceil && x!=winmine.x_ceil && winmine.cells[y+1][x+1]==9) {
+		num++; }
+	return(num);
+}
+/* used when replacing cell values when a mine is moved (first click) */
+winmine.update_neighbors = function(y, x) {
+	if(y!=0 && x!=0 && winmine.cells[y-1][x-1]!=9) {
+		winmine.cells[y-1][x-1] = winmine.get_neighbor_mine_freq(y-1,x-1); }
+	if(y!=0 && winmine.cells[y-1][x]!=9) {
+		winmine.cells[y-1][x] = winmine.get_neighbor_mine_freq(y-1,x); }
+	if(y!=0 && x!=winmine.x_ceil && winmine.cells[y-1][x+1]!=9) {
+		winmine.cells[y-1][x+1] = winmine.get_neighbor_mine_freq(y-1,x+1); }
+	if(x!=0 && winmine.cells[y][x-1]!=9) {
+		winmine.cells[y][x-1] = winmine.get_neighbor_mine_freq(y,x-1); }
+	if(x!=winmine.x_ceil && winmine.cells[y][x+1]!=9) {
+		winmine.cells[y][x+1] = winmine.get_neighbor_mine_freq(y,x+1); }
+	if(y!=winmine.y_ceil && x!=0 && winmine.cells[y+1][x-1]!=9) {
+		winmine.cells[y+1][x-1] = winmine.get_neighbor_mine_freq(y+1,x-1); }
+	if(y!=winmine.y_ceil && winmine.cells[y+1][x]!=9) {
+		winmine.cells[y+1][x] = winmine.get_neighbor_mine_freq(y+1,x); }
+	if(y!=winmine.y_ceil && x!=winmine.x_ceil && winmine.cells[y+1][x+1]!=9) {
+		winmine.cells[y+1][x+1]  = winmine.get_neighbor_mine_freq(y+1,x+1); }
+}
+
+/* used for 3BV */
+winmine.flood_fill = function(y, x) {
+	winmine.cell_count--;
+	const value = winmine.c[y][x];
+	winmine.c[y][x] = -1;
+	if(value == 0) {
+		if(y!=0 && x!=0 && winmine.c[y-1][x-1]!=-1) {
+			winmine.flood_fill(y-1,x-1); }
+		if(y!=0 && winmine.c[y-1][x]!=-1) {
+			winmine.flood_fill(y-1,x); }
+		if(y!=0 && x!=winmine.x_ceil && winmine.c[y-1][x+1]!=-1) {
+			winmine.flood_fill(y-1,x+1); }
+		if(x!=0 && winmine.c[y][x-1]!=-1) {
+			winmine.flood_fill(y,x-1); }
+		if(x!=winmine.x_ceil && winmine.c[y][x+1]!=-1) {
+			winmine.flood_fill(y,x+1); }
+		if(y!=winmine.y_ceil && x!=0 && winmine.c[y+1][x-1]!=-1) {
+			winmine.flood_fill(y+1,x-1); }
+		if(y!=winmine.y_ceil && winmine.c[y+1][x]!=-1) {
+			winmine.flood_fill(y+1,x); }
+		if(y!=winmine.y_ceil && x!=winmine.x_ceil && winmine.c[y+1][x+1]!=-1) {
+			winmine.flood_fill(y+1,x+1); }
+	}
+}
+
+winmine.set_3bv = function() {
+	winmine.c = JSON.parse(JSON.stringify(winmine.cells)); /* make a copy for this */
+	winmine.cell_count = (winmine.height * winmine.width) - winmine.mine_count;
+	winmine._3bv = 0;
+	for (let i = 0; i < winmine.height; ++i) {
+		for (let j = 0; j < winmine.width; ++j) {
+			if(winmine.c[i][j] == 0) {
+				/* console.log('row: ', i, ";  col: ", j); */
+				winmine._3bv++;
+				winmine.flood_fill(i, j);
+			}
 		}
 	}
+	/* console.log('_3bv: ', winmine._3bv); */
+	/* console.log('cell_total: ', winmine.cell_total); */
+	winmine._3bv = winmine.cell_count + winmine._3bv;
+	delete winmine.c;
+	delete winmine.cell_count;
+}
 
-	/* create html div grid cells */
-	const cell_container = document.getElementsByClassName('cell-container')[0];
-	for (let i = 0; i < winmine.cells.length; i += 1) {
-		const cell_div = document.createElement('div');
-		cell_div.id = 'cell_'.concat(winmine.cells[i]);
-		cell_container.append(cell_div);
+winmine.clear_mine_field = function(y, x) {
+	const value = winmine.cells[y][x];
+	if(value > 8) {
+		return;
 	}
-	const grid_template_rows = 'auto '.repeat(height);
-	const grid_template_columns = 'auto '.repeat(width);
+	winmine.triggered++;
+	winmine.cells[y][x] = -1;
+	const cell_element = document.getElementById('cell_'+y+'_'+x);
+	if(value > 0) {
+		cell_element.classList.add('triggered');
+		cell_element.classList.add('c' + value);
+		return;
+	}
+	if(value == 0) {
+		cell_element.classList.add('triggered');
+		if(y!=0 && x!=0 && winmine.cells[y-1][x-1]!=-1) {
+			winmine.clear_mine_field(y-1,x-1); }
+		if(y!=0 && winmine.cells[y-1][x]!=-1) {
+			winmine.clear_mine_field(y-1,x); }
+		if(y!=0 && x!=winmine.x_ceil && winmine.cells[y-1][x+1]!=-1) {
+			winmine.clear_mine_field(y-1,x+1); }
+		if(x!=0 && winmine.cells[y][x-1]!=-1) {
+			winmine.clear_mine_field(y,x-1); }
+		if(x!=winmine.x_ceil && winmine.cells[y][x+1]!=-1) {
+			winmine.clear_mine_field(y,x+1); }
+		if(y!=winmine.y_ceil && x!=0 && winmine.cells[y+1][x-1]!=-1) {
+			winmine.clear_mine_field(y+1,x-1); }
+		if(y!=winmine.y_ceil && winmine.cells[y+1][x]!=-1) {
+			winmine.clear_mine_field(y+1,x); }
+		if(y!=winmine.y_ceil && x!=winmine.x_ceil && winmine.cells[y+1][x+1]!=-1) {
+			winmine.clear_mine_field(y+1,x+1); }
+	}
+}
+
+winmine.create_mine_field = function() {
+
+	/* actually let's replace a single long array of indexes represented by character string with a 2d integer array cells[row][col] */
+	winmine.cells = [];
+	const cell_container = document.getElementsByClassName('cell-container')[0];
+	for (let row = 0; row < winmine.height; row += 1) {
+		winmine.cells.push(row);
+		winmine.cells[row] = [];
+		for (let col = 0; col < winmine.width; col += 1) {
+			winmine.cells[row].push(0);
+			/* create html grid div cells for .cell_container */
+			const cell_div = document.createElement('div');
+			cell_div.id = 'cell_'+row+'_'+col;
+			cell_container.append(cell_div);
+		}
+	}
+	/* define html grid for .cell-container */
+	const grid_template_rows = 'auto '.repeat(winmine.height);
+	const grid_template_columns = 'auto '.repeat(winmine.width);
 	cell_container.style.setProperty('grid-template-rows', grid_template_rows);
 	cell_container.style.setProperty('grid-template-columns', grid_template_columns);
 
 	/* create mine array */
 	winmine.mines = [];
-	while(winmine.mines.length < winmine.mine_count) {
-		let random_int = winmine.random(0,(winmine.cells.length-1));
-		if(!winmine.mines.includes(winmine.cells[random_int])) {
-			winmine.mines.push(winmine.cells[random_int]);
+	winmine.y_ceil = winmine.height - 1;
+	winmine.x_ceil = winmine.width - 1;
+	for (let mine = 0; winmine.mines.length < (winmine.mine_count+1); mine += 1) {
+		let y = winmine.random(0,(winmine.height-1));
+		let x = winmine.random(0,(winmine.width-1));
+		if(winmine.mines.includes(y+'_'+x)) {
+			continue;
+		} else {
+			if(winmine.mines.length == (winmine.mine_count)) {
+				/* stash one random backup mine to support first-click-is-free rule */
+				winmine.backup_y = y;
+				winmine.backup_x = x;
+				break;
+			} else {
+				winmine.mines.push(y+'_'+x);
+			}
+		}
+		if(winmine.cells[y][x] != 9) {
+			winmine.cells[y][x] = 9;
+			/* set neighbor mine frequency values now (overlaps repeat ++increment) so that we can reference the board values instead of computing during play */
+			if(y!=0 && x!=0 && winmine.cells[y-1][x-1]!=9) {
+				winmine.cells[y-1][x-1]++; }
+			if(y!=0 && winmine.cells[y-1][x]!=9) {
+				winmine.cells[y-1][x]++; }
+			if(y!=0 && x!=winmine.x_ceil && winmine.cells[y-1][x+1]!=9) {
+				winmine.cells[y-1][x+1]++; }
+			if(x!=0 && winmine.cells[y][x-1]!=9) {
+				winmine.cells[y][x-1]++; }
+			if(x!=winmine.x_ceil && winmine.cells[y][x+1]!=9) {
+				winmine.cells[y][x+1]++; }
+			if(y!=winmine.y_ceil && x!=0 && winmine.cells[y+1][x-1]!=9) {
+				winmine.cells[y+1][x-1]++; }
+			if(y!=winmine.y_ceil && winmine.cells[y+1][x]!=9) {
+				winmine.cells[y+1][x]++; }
+			if(y!=winmine.y_ceil && x!=winmine.x_ceil && winmine.cells[y+1][x+1]!=9) {
+				winmine.cells[y+1][x+1]++; }
 		}
 	}
-	/* random backup mine for winmine first-click-is-free rule */
-	winmine.backup_mine = (winmine.cells.filter(x => !winmine.mines.includes(x)))[winmine.random(1, ((winmine.height*winmine.width)-winmine.mine_count))-1]
+
+	winmine.set_3bv();
+
 }
 
-winmine.choose_cell = function(cell_html_id, is_multi_cell = false) {
+winmine.choose_cell = function(cell_html_id) {
 	if(performance.getEntriesByName('game_start').length === 0) {
 		performance.mark('game_start');
 		winmine.timer_worker = new Worker(URL.createObjectURL(winmine.start_timer_function_blob));
@@ -322,15 +477,24 @@ winmine.choose_cell = function(cell_html_id, is_multi_cell = false) {
 		}
 	}
 	const cell_id_string = cell_html_id.substring(5);
-	if(winmine.triggered_cells.includes(cell_id_string)) {
+
+	// test
+	const cell_id_stringA = cell_html_id.substring(5).replace('_',',');
+	const y = parseInt(cell_id_stringA.split(',')[0]);
+	const x = parseInt(cell_id_stringA.split(',')[1]);
+
+	const cell_element = document.getElementById(cell_html_id);
+	if(cell_element.classList.contains('triggered')) {
 		return;
 	}
-	winmine.game_clicks.push([winmine.get_game_duration(1), 'a', cell_id_string]);
-	const cell_element = document.getElementById(cell_html_id);
-	cell_element.classList.add('triggered-cell');
+	cell_element.classList.add('triggered');
+
+	const game_click_code = (winmine.multi_cell) ? 'm': 'a';
+	winmine.game_clicks.push([winmine.get_game_duration(1), game_click_code, cell_id_string]);
+	
 	/* 1. if cell is a mine and at least one cell has been triggered (not first click), game over */
-	if(winmine.mines.includes(cell_id_string)) {
-		if(winmine.triggered_cells.length > 0) {
+	if(winmine.cells[y][x] == 9) {
+		if(winmine.triggered > 0) {
 			winmine.timer_worker.terminate();
 			winmine.game_over = true;
 			winmine.game_win = false;
@@ -341,66 +505,37 @@ winmine.choose_cell = function(cell_html_id, is_multi_cell = false) {
 			for (let i = 0; i < winmine.mines.length; i += 1) {
 				if(!winmine.flagged_cells.includes(winmine.mines[i])) {
 					const mine_cell = document.getElementById('cell_' + winmine.mines[i])
-					mine_cell.classList.remove('marked-cell');
-					mine_cell.classList.add('triggered-cell','mine-cell');
+					mine_cell.classList.remove('question');
+					mine_cell.classList.add('triggered','mine');
 				}
 			}
-			const incorrectly_flagged = winmine.flagged_cells.filter(x => !winmine.mines.includes(x));
+			const incorrectly_flagged = winmine.flagged_cells.filter(id => !winmine.mines.includes(id));
 			for (let i = 0; i < incorrectly_flagged.length; i += 1) {
 				const elem_id = incorrectly_flagged[i];
 				const elem = document.getElementById('cell_' + elem_id);
-				elem.classList.remove('flagged-cell');
-				elem.classList.add('nomine-cell');
+				elem.classList.remove('flag');
+				elem.classList.add('notmine');
 			}
 			return;
 		} else {
+			/* replace mine in array */
 			const idx = winmine.mines.indexOf(cell_id_string);
-			winmine.mines[idx] = winmine.backup_mine;
+			winmine.mines[idx] = winmine.backup_y+'_'+winmine.backup_x;
+			/* replace mine in cells board */
+			winmine.cells[winmine.backup_y][winmine.backup_x] = 9;
+			winmine.cells[y][x] = winmine.get_neighbor_mine_freq(y, x);
+			/* update cells board neighbor values */
+			winmine.update_neighbors(y, x);
+			winmine.update_neighbors(winmine.backup_y, winmine.backup_x);
+			
 		}
 	}
 
-	/* 2. if cell is a neighbor of a mine, trigger cell with 1-8 integer  */
-	winmine.triggered_cells.push(cell_id_string);
-	//cell_element.classList.add('triggered-cell');
-	const neighboring_cells = winmine.get_array_of_neighbor_cells(cell_id_string);
-	const neighboring_mines = winmine.get_array_of_neighboring_mines(neighboring_cells);
-	if(neighboring_mines.length > 0) {
-		cell_element.classList.add('c' + neighboring_mines.length);
-	}
+	/* 2. this function sets the appropriate css classes and uses the same recursion method used to get 3BV  */
+	winmine.clear_mine_field(y, x);
 
-	/* 3. if cell is not a mine or a neighbor, do a recursive for search */
-	if(neighboring_mines.length === 0) {
-		//cell_element.classList.add('triggered-cell');
-		let search_elements_array = neighboring_cells;
-		for (let i = 0; i < search_elements_array.length; i += 1) {
-			const cell_id_string2 = search_elements_array[i];
-			const cell_element2 = document.getElementById('cell_'+cell_id_string2);
-			const neighboring_cells2 = winmine.get_array_of_neighbor_cells(cell_id_string2);
-			const neighboring_mines2 = winmine.get_array_of_neighboring_mines(neighboring_cells2);
-			if(winmine.flagged_cells.includes(cell_id_string2)) {
-				/* skip evaluating flagged cells */
-				continue;
-			}
-			winmine.triggered_cells.push(cell_id_string2);
-			cell_element2.classList.add('triggered-cell');
-			if(neighboring_mines2.length > 0) {
-				cell_element2.classList.add('c' + neighboring_mines2.length);
-			} else {
-				for (let i2 = 0; i2 < neighboring_cells2.length; i2 += 1) {
-					if(!search_elements_array.includes(neighboring_cells2[i2])) {
-						search_elements_array.push(neighboring_cells2[i2])
-					}
-				}
-			}
-			if(search_elements_array.length > 3600) {
-				alert('too many cells');
-				return;
-			}
-		}
-	}
-
-	/* 4. consider win */
-	if(winmine.triggered_cells.length === (winmine.height*winmine.width-winmine.mine_count)) {
+	/*  3. consider win */
+	if(winmine.triggered >= (winmine.height*winmine.width-winmine.mine_count)) {
 		winmine.game_duration = winmine.get_game_duration(3);
 		winmine.timer_worker.terminate();
 		winmine.game_over = true;
@@ -413,35 +548,44 @@ winmine.choose_cell = function(cell_html_id, is_multi_cell = false) {
 		for (let i = 0; i < unflagged_mines.length; i += 1) {
 			const elem_id = unflagged_mines[i];
 			const elem = document.getElementById('cell_' + elem_id);
-			elem.classList.add('flagged-cell');
+			elem.classList.add('flag');
 		}
 		winmine.set_mine_counter(0);
 		winmine.game_end_time = (new Date(Date.now())).toISOString();
 		winmine.save_record();
 		return;
 	}
-	
 }
 
 winmine.flag_cell = function(cell_html_id) {
 	const cell_id_string = cell_html_id.substring(5);
+	const coords = winmine.id_as_y_x(cell_html_id);
 	const cell_element = document.getElementById(cell_html_id);
-	const is_flagged = cell_element.classList.contains('flagged-cell');
-	const is_marked = cell_element.classList.contains('marked-cell');
+	const is_flagged = cell_element.classList.contains('flag');
+	const is_marked = cell_element.classList.contains('question') && winmine.marks;
 	let action_code;
 	if(!is_flagged && !is_marked) {
-		cell_element.classList.add('flagged-cell');
+		cell_element.classList.add('flag');
 		winmine.flagged_cells.push(cell_id_string);
-		action_code = 'b';
+		action_code = 'f';
+		/* so that clear_mine_field() can treat flags like mines, give board a value that it will ignore. we set this back if cell is unflagged */
+		if(winmine.cells[coords[0]][coords[1]] != 9) {
+			winmine.cells[coords[0]][coords[1]] = 10;
+		}
 	} else if(is_flagged) {
-		cell_element.classList.remove('flagged-cell');
+		cell_element.classList.remove('flag');
 		winmine.flagged_cells = winmine.flagged_cells.filter(item => item !== cell_id_string);
-		cell_element.classList.add('marked-cell');
-		winmine.marked_cells.push(cell_id_string);
-		action_code = 'c';
+		if(winmine.marks) {
+			cell_element.classList.add('question');
+			winmine.marked_cells.push(cell_id_string);
+			action_code = 'q';
+		}
+		if(winmine.cells[coords[0]][coords[1]] != 9) {
+			winmine.cells[coords[0]][coords[1]] = winmine.get_neighbor_mine_freq(coords[0],coords[1]);
+		}
 	} else if(is_marked) {
-		cell_element.classList.remove('marked-cell');
-		action_code = 'd';
+		cell_element.classList.remove('question');
+		action_code = 'c';
 		winmine.marked_cells = winmine.marked_cells.filter(item => item !== cell_id_string);
 	}
 	if(winmine.game_clicks.length !== 0) {
@@ -450,23 +594,23 @@ winmine.flag_cell = function(cell_html_id) {
 	winmine.set_mine_counter(winmine.mine_count - winmine.flagged_cells.length);
 }
 
-/* create all the javascript event listeners */
+/* create all the javascript event listeners on page load */
 document.addEventListener('DOMContentLoaded', function() {
 	winmine.load_config();
-	winmine.fill_cell_container(winmine.height, winmine.width);
+	winmine.create_mine_field();
 	winmine.insert_seven_segment_elements();
 	winmine.init_counter(winmine.mine_count);
 	winmine.init_timer();
 	winmine.set_file_menu_item_marks();
 
-	winmine.triggered_cells = []; /* cells are pushed here onmouseup */
+	winmine.triggered = 0; /* clear_mine_field() increments this to determine game win */
 	winmine.flagged_cells = []; /* cells are pushed here contextmenu (right click) */
 	winmine.marked_cells = []; /* another right click contextmenu, for question mark cells */
-	winmine.game_clicks = [];
+	winmine.game_clicks = []; /* record actions for game save/replay */
 	winmine.game_over = false;
 
 	/* file menu container events are delegated from the menu item container */
-	document.getElementsByClassName('menu-game-container')[0].addEventListener('mouseup', function(event) {
+	document.getElementsByClassName('file-menu')[0].addEventListener('mouseup', function(event) {
 		const item_text = event.target.getAttribute('data-name');
 		if(item_text === 'New') {
 			location.reload();
@@ -490,13 +634,44 @@ document.addEventListener('DOMContentLoaded', function() {
 		if(item_text === 'Custom...') {
 			document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 			document.getElementsByClassName('content-custom-game')[0].classList.add('content-custom-game-enabled');
-			let saved_custom_field_settings = JSON.parse(localStorage.getItem('custom_field_settings'));
+			let saved_custom_field_settings = JSON.parse(localStorage.getItem('setting_custom_field'));
 			if(saved_custom_field_settings === null) {
 				saved_custom_field_settings = [8,8,10];
 			}
 			document.getElementsByClassName('custom-game-field')[0].value = saved_custom_field_settings[0];
 			document.getElementsByClassName('custom-game-field')[1].value = saved_custom_field_settings[1];
 			document.getElementsByClassName('custom-game-field')[2].value = saved_custom_field_settings[2];
+		}
+		if(item_text === 'Marks (?)') {
+			if(event.target.classList.contains('menu-mark')) {
+				event.target.classList.remove('menu-mark');
+				localStorage.setItem('setting_marks', 'false');
+				winmine.marks = false;
+				winmine.marked_cells.forEach(function(item) {
+					document.getElementById('cell_'+item).classList.remove('question');
+				});
+				winmine.marked_cells = [];
+			} else {
+				event.target.classList.add('menu-mark');
+				localStorage.setItem('setting_marks', 'true');
+				winmine.marks = true;
+			}
+			return;
+		}
+		if(item_text === "Color") {
+			if(event.target.classList.contains('menu-mark')) {
+				event.target.classList.remove('menu-mark');
+				document.documentElement.style.setProperty('filter', 'grayscale(100%)');
+				localStorage.setItem('setting_color', 'false');
+				winmine.color = false;
+			} else {
+				event.target.classList.add('menu-mark');
+				document.documentElement.style.removeProperty('filter');
+				localStorage.setItem('setting_color', 'true');
+				winmine.color = true;
+				
+			}
+			return;
 		}
 		if(item_text === 'Best Times...') {
 			document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
@@ -515,6 +690,25 @@ document.addEventListener('DOMContentLoaded', function() {
 			window.close();
 			return;
 		}
+		if(item_text === 'Contents') {
+			return;
+		}
+		if(item_text === 'About Minesweeper...') {
+			return;
+		}
+		if(item_text === 'Extra Menu*') {
+			const extra_menu = document.getElementsByClassName('extra-menu-frame')[0];
+			if(event.target.classList.contains('menu-mark')) {
+				extra_menu.style.display = 'none';
+				event.target.classList.remove('menu-mark');
+				localStorage.setItem('setting_extra_menu', 'false');
+			} else {
+				extra_menu.style.display = 'inline-block';
+				event.target.classList.add('menu-mark');
+				localStorage.setItem('setting_extra_menu', 'true');
+			}
+			return;
+		}
 	});
 
 	/* prevent default right click on everything below file menu */
@@ -522,102 +716,108 @@ document.addEventListener('DOMContentLoaded', function() {
 		event.preventDefault();
 	});
 
-	/* gameplay cell events are delegated by the cell-container */
+	/* gameplay cell events are delegated by the .cell-container */
 	const cell_container = document.getElementsByClassName('cell-container')[0];
 	cell_container.addEventListener('mouseover', function(event) {
 		if(winmine.game_over) { return; }
 		if(winmine.mouse_is_down && winmine.mouse2_is_down) {
-			const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
-			document.querySelectorAll('#cell_' + neighboring_cells.join(':not(.flagged-cell),#cell_') + ':not(.flagged-cell)').forEach(function (element) {
-				element.classList.add('active-cell');
+			const coords = winmine.id_as_y_x(event.target.id)
+			const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
+			document.querySelectorAll('#cell_' + neighboring_cells.join(':not(.flag):not(.triggered),#cell_') + ':not(.flag):not(.triggered)').forEach(function (element) {
+				element.classList.add('active');
 			});
-			if(!event.target.classList.contains('flagged-cell')) {
-				event.target.classList.add('active-cell');
+			if(!event.target.classList.contains('flag')) {
+				event.target.classList.add('active');
 			}
 		}
-		if(event.target.classList.contains('flagged-cell')) { return; }
-		if(event.target.classList.contains('marked-cell')) { return; }
+		if(event.target.classList.contains('flag')) { return; }
+		if(event.target.classList.contains('question')) { return; }
 		if(winmine.mouse_is_down && !winmine.multi_cell) {
-			event.target.classList.add('active-cell');
+			event.target.classList.add('active');
 		}
 	});
 	cell_container.addEventListener('mouseout', function(event) {
 		if(winmine.game_over) { return; }
 		if(winmine.mouse_is_down && winmine.mouse2_is_down) {
-			const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+			const coords = winmine.id_as_y_x(event.target.id)
+			const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
 			document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
-				element.classList.remove('active-cell');
+				element.classList.remove('active');
 			});
 		}
-		if(event.target.classList.contains('flagged-cell')) { return; }
-		if(event.target.classList.contains('marked-cell')) { return; }
-		event.target.classList.remove('active-cell');
+		if(event.target.classList.contains('flag')) { return; }
+		if(event.target.classList.contains('question')) { return; }
+		event.target.classList.remove('active');
 	});
 	cell_container.addEventListener('mousedown', function(event) {
 		if(winmine.game_over) { return; }
 		if(event.button === 0) { winmine.mouse_is_down = true; }
 		if(event.button === 2) { winmine.mouse2_is_down = true; }
 		if(winmine.mouse_is_down && winmine.mouse2_is_down) {
-			const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
-			document.querySelectorAll('#cell_' + neighboring_cells.join(':not(.flagged-cell),#cell_') + ':not(.flagged-cell)').forEach(function (element) {
-				element.classList.add('active-cell');
+			const coords = winmine.id_as_y_x(event.target.id)
+			const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
+			document.querySelectorAll('#cell_' + neighboring_cells.join(':not(.flag):not(.triggered),#cell_') + ':not(.flag):not(.triggered)').forEach(function (element) {
+				element.classList.add('active');
 			});
-			if(!event.target.classList.contains('flagged-cell')) {
-				event.target.classList.add('active-cell');
+			if(!event.target.classList.contains('flag')) {
+				event.target.classList.add('active');
 			}
 			winmine.multi_cell = true;
 		}
 		if(winmine.mouse2_is_down) {
 			if(winmine.mouse_is_down) { return;	}
-			if(event.target.classList.contains('triggered-cell')) { return; }
+			if(event.target.classList.contains('triggered')) { return; }
 			winmine.flag_cell(event.target.id);
 			return;
 		}
-		if(event.target.classList.contains('flagged-cell')) { return; }
-		if(event.target.classList.contains('marked-cell')) { return; }
-		if(!event.target.classList.contains('triggered-cell')) {
-			event.target.classList.add('active-cell');
+		if(event.target.classList.contains('flag')) { return; }
+		if(event.target.classList.contains('question')) { return; }
+		if(!event.target.classList.contains('triggered')) {
+			event.target.classList.add('active');
 		}
 	});
 	cell_container.addEventListener('mouseup', function(event) {
 		if(winmine.game_over) { return; }
-		/* most of mouseup is managing the two ways two clear cell(s), direct click or left+right indirect click */
+		/* mouseup is managing the two ways two clear cell(s), direct click or left+right indirect click */
 		if(event.button === 0) { winmine.mouse_is_down = false; }
 		if(event.button === 2) { winmine.mouse2_is_down = false; }
 		if(winmine.multi_cell) {
 			if(event.target.classList.length >= 2) {
-				const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+				const coords = winmine.id_as_y_x(event.target.id)
+				const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
 				const flagged_neighboring_cells = [];
 				document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
-					if(element.classList.contains('flagged-cell')) {
+					if(element.classList.contains('flag')) {
 						flagged_neighboring_cells.push(element.id.substring(5));
 					}
-					element.classList.remove('active-cell');
+					element.classList.remove('active');
 				});
 				if(flagged_neighboring_cells.length == event.target.classList[1].substring(1)) {
 					const cells_to_choose = neighboring_cells.filter(x => !flagged_neighboring_cells.includes(x));
 					cells_to_choose.forEach(function (element) {
+						const e = document.getElementById('cell_'+element);
+						if(e.classList.contains('triggered')) { return; }
 						winmine.choose_cell('cell_'+element);
-						document.getElementById('cell_'+element).classList.remove('marked-cell'); /* marked cells are triggered like normal cells. remove class to prevent confusion */
+						e.classList.remove('question'); /* marked cells are triggered like normal cells. remove class to prevent confusion */
 					});
 				}
 			} else {
-				const neighboring_cells = winmine.get_array_of_neighbor_cells(event.target.id.substring(5));
+				const coords = winmine.id_as_y_x(event.target.id)
+				const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
 				document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
-					element.classList.remove('active-cell');
+					element.classList.remove('active');
 				});
 			}
-			event.target.classList.remove('active-cell');
+			event.target.classList.remove('active');
 			if(!winmine.mouse_is_down && !winmine.mouse2_is_down) {
 				winmine.multi_cell = false;
 			}
 			return;
 		}
 		if(event.button === 2) { return; }
-		if(event.target.classList.contains('flagged-cell')) { return; }
-		if(event.target.classList.contains('marked-cell')) { return; }
-		//if(!event.target.classList.contains('active-cell')) { return; }
-		event.target.classList.remove('active-cell');
+		if(event.target.classList.contains('flag')) { return; }
+		if(event.target.classList.contains('question')) { return; }
+		event.target.classList.remove('active');
 		winmine.choose_cell(event.target.id);
 	});
 
@@ -693,10 +893,9 @@ document.addEventListener('DOMContentLoaded', function() {
 		if(width  < 6)  { width = 6; }
 		if(height > 120) { height = 120; }
 		if(width  > 120) { width = 120; }
-		if(mines/(height*width) < .09)  { mines = Math.round((height*width)*.09) }
-		if(mines/(height*width) > .945) { mines = Math.round((height*width)*.945) }
-		if(mines > 9999) { mines = 9999; }
-		localStorage.setItem('custom_field_settings', JSON.stringify([height, width, mines]));
+		if(mines < 1)  { mines = 1 }
+		if(mines > ((height*width)-1)) { mines = (height*width)-1; }
+		localStorage.setItem('setting_custom_field', JSON.stringify([height, width, mines]));
 		const new_window_salt = winmine.random(100000,999999);
 		const window_width = (width*16)+20;
 		const window_height = (height*16)+83;
