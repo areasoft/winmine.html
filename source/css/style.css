@@ -6,6 +6,7 @@ html, body {
 	cursor: default;
 }
 
+
 /* File menu stuff */
 .file-menu-frame {
 	border-bottom: 1px solid rgba(240,240,240);
@@ -34,7 +35,7 @@ html, body {
 }
 .game-file-menu-frame:hover .menu-game-button,
 .help-file-menu-frame:hover .menu-help-button,
-.extra-file-menu-frame:hover .menu-extra-button {
+.extra-menu-frame:hover .menu-extra-button {
 	background-color: rgba(209, 226, 242);
 	border: 1px solid rgba(161,197,233);
 }
@@ -53,24 +54,35 @@ html, body {
 	display: inline-block !important;
 	background-color: rgba(245,246,247);
 	position: absolute;
+	
+}
+.menu-container-top {
+	z-index: 1;
 }
 .menu-game-container,
 .menu-help-container,
 .menu-extra-container {
 	display: none;
-	width: 132px;
-	white-space: pre;
+	width: 130px;
+	/* white-space: pre; */
 	background-color: rgba(245,246,247);
 	border: 1px solid rgba(204,204,204);
 }
+.menu-help-container {
+	max-width: calc(100vw - 46px);
+	width: 140px;
+}
+.menu-extra-container {
+	max-width: calc(100vw - 84px);
+}
 .menu-item[data-name=New] > div {
 	float: right;
-	padding-right: 10px;
+	padding-right: 4px;
 }
 .menu-item {
 	font-family: 'Segoe UI';
 	font-size: 9pt;
-	padding: 1px 0px 1px 16px;
+	padding: 1px 8px 1px 16px;
 	color: #000000;
 }
 .menu-item:hover {
@@ -145,7 +157,8 @@ html, body {
 	border-right: 2px solid rgba(128,128,128);
 	border-bottom: 2px solid rgba(128,128,128);
 }
-.active, .triggered, .notmine {
+/* for the main cell visual classes, use !important to replace default cell styling so we don't have to maintain a default class we always remove. not ideal but convenient and lets us pass some performance/managing to css */
+.active, .clear, .notmine {
 	padding: 1px 2px 2px 1px;
 	border-top: 1px solid rgba(128,128,128) !important;
 	border-left: 1px solid rgba(128,128,128) !important;
@@ -289,7 +302,7 @@ html, body {
 .y7 {
 	background-color: transparent;
 }
-.the-red {
+.red7 {
 	background-color: red !important;
 }
 
@@ -301,9 +314,16 @@ html, body {
 	border-bottom: 1px solid rgba(105,105,105);
 	font-family: Tahoma, Geneva, sans-serif;
 	font-size: 8pt;
-	width: 146px;
+	min-width: 146px;
 	position: absolute;
 	display: none;
+	max-height: calc(100vh - 30px);
+	overflow-y: scroll;
+	scrollbar-width: none;
+}
+.feature-content-frame::-webkit-scrollbar { /* WebKit */
+	width: 0;
+	height: 0;
 }
 .feature-content {
 	border-top: 1px solid rgba(255,255,255);
@@ -379,15 +399,15 @@ input.custom-game-field {
 	grid-row: 1;
 	place-self: center;
 }
-.content-best-times-table {
+.content-best-times-table-container {
   grid-column: 1;
   grid-row: 2;
 	place-self: center;
 }
-.content-custom-game-table > div {
+.content-best-times-table {
 	display: grid;
-/* 	grid-template-rows: auto auto auto;
-	grid-template-columns: auto auto; */
+	grid-template-rows: auto auto auto;
+	grid-template-columns: auto auto auto;
 	gap: 5px 5px;
 }
 .content-best-times-buttons {
@@ -444,7 +464,221 @@ input.custom-game-field {
 	width: 52px;
 }
 
-/* test */
+.content-escape-button-wrap {
+	position: absolute;
+	width: 20px;
+	top: 2px;
+	left: calc(100% - 20px);
+}
+.content-escape-button {
+	position: fixed;
+	padding: 2px;
+	font-family: verdana;
+	font-size: 16px;
+	color: rgb(102, 0, 153);
+	text-decoration: underline;
+	cursor: pointer;
+	background-color: rgba(240,240,240);
+}
+
+.content-help-contents {
+	display: none;
+}
+.content-help-contents-enabled {
+	display: block;
+}
+
+.content-about {
+	display: none;
+}
+.content-about-enabled {
+	display: block;
+}
+
+.content-about-text-section {
+	margin-top: 10px;
+}
+
+.content-about-header {
+	font-size: 14px;
+	font-weight: bold;
+}
+
+.content-help-contents-toc {
+	margin-bottom: 4px;
+}
+.content-help-contents-toc > div:first-child {
+	margin-top: 6px;
+}
+.content-help-contents-toc > div:not(:first-child) {
+	margin-left: 10px;
+}
+.content-help-contents-toc > div:not(:first-child):hover {
+	text-decoration: underline;
+}
+.content-help-contents-body {
+	padding-bottom: 10px;
+}
+.content-help-minesweeper-overview > div:nth-child(1),
+.content-help-to-play-minesweeper > div:nth-child(1),
+.content-help-to-customize > div:nth-child(1),
+.content-help-strategies > div:nth-child(1) {
+	font-size: 14px;
+	font-weight: bold;
+	margin-top: 16px;
+	margin-bottom: 10px;
+}
+
+ol, ul {
+	margin-top: 0px;
+	margin-bottom: 0px;
+}
+li {
+	margin-top: 4px;
+}
+
+.content-game-history {
+	display: none;
+}
+.content-game-history-enabled {
+	display: block;
+}
+.content-game-history-header div {
+	display: inline-block;
+}
+.content-game-history-header-select-label {
+	display: block !important;
+	padding-bottom: 8px;
+	font-size: 14px;
+	font-weight: bold;
+}
+/* .content-game-history-icons-wrap {
+	padding-left: 10px;
+} */
+.content-game-history-icons-wrap div {
+	padding-left: 10px;
+	font-size: 16px;
+}
+.content-game-history-icons-wrap div[data-game-history-action="game-history-save"]:hover,
+.content-game-history-icons-wrap div[data-game-history-action="game-history-import"]:hover {
+	color: rgb(0, 0, 216);
+}
+.content-game-history-icons-wrap div[data-game-history-action="game-history-delete"]:hover {
+	color: rgb(153, 0, 0);
+}
+.content-game-history-table {
+	padding-top: 5px;
+}
+.content-game-history-table > table {
+	border-collapse: collapse;
+}
+.content-game-history-table > table > thead th {
+	text-align: center;
+}
+.content-game-history-table > table > thead th[scope=col]:hover {
+	text-decoration: overline;
+	cursor: pointer;
+}
+.content-game-history-table > table > tbody tr:nth-child(even) {
+	background-color: #ffffff;
+}
+.content-game-history-table > table > tbody tr:nth-child(odd) {
+	background-color: #f5f5f5;
+}
+.content-game-history-table > table > tbody tr td:nth-child(-n+4) {
+	border: 1px solid #bbbbbb;
+}
+.content-game-history-table > table > tbody tr td:nth-child(n+5) {
+	border: 1px solid #dddddd;
+}
+.content-game-history-table > table > tbody tr:hover {
+	background-color: rgba(255, 255, 0, 0.2);
+}
+.content-game-history-table > table > tbody td {
+	text-align: right;
+	padding: 4px;
+}
+.content-game-history-table > table > tbody td:first-child {
+	text-align: left;
+}
+.content-game-history-select {
+	font-family: Consolas;
+}
+/* .content-game-history-select option:nth-child(n+3):nth-child(-n+7) { */
+	.content-game-history-select option {
+	border-bottom: 1px solid black;
+}
+.game-history-import-input {
+	display: none;
+}
+
+.content-game-history-delete {
+	display: none;
+}
+.content-game-history-delete div span:hover {
+	cursor: pointer;
+	text-decoration: underline;
+}
+.content-game-history-delete div[data-game-delete-action="game-delete-cancel"] {
+	font-size: 1.3em;
+	padding-top: 12px;
+	color: rgb(102, 0, 153);
+}
+.content-game-history-delete div[data-game-delete-action="game-delete-board"] {
+	font-size: 1.25em;
+	padding-top: 4px;
+	color: rgb(153, 0, 0);
+}
+.content-game-history-delete div[data-game-delete-action="game-delete-every-board"] {
+	padding-top: 10px;
+	color: rgb(153, 0, 0);
+}
+.content-game-history-delete-enabled {
+	display: block;
+}
+.content-game-history-delete-enabled + div {
+	display: none;
+}
+.content-game-history-no-history {
+	display: none;
+}
+.content-game-history-no-history-enabled {
+	display: block;
+}
+.content-game-history-no-history-enabled + div + div {
+	display: none;
+}
+
+.sort-asc-icon, .sort-desc-icon {
+	text-decoration: overline;
+}
+.sort-asc-icon:after {
+	display:inline-block;
+	text-decoration: none !important;
+	content: '▴';
+	position: absolute;
+}
+.sort-desc-icon:after {
+	display:inline-block;
+	text-decoration: none !important;
+	content: '▾';
+	position: absolute;
+}
+.col-hover {
+	background-color: rgba(255, 255, 0, 0.1);
+}
 
 
-
+/* global things */
+.display-none {
+	display: none;
+}
+.display-block {
+	display: block;
+}
+.text-decoration-none {
+	text-decoration: none;
+}
+.text-decoration-underline {
+	text-decoration: underline;
+}
