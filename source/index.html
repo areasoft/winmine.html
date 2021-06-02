@@ -25,7 +25,7 @@
 					<div class="menu-item" data-name="Color">Color</div>
 					<div class="menu-item not-available" data-name="Sound">Sound</div>
 					<div class="menu-item-separator"></div>
-					<div class="menu-item not-available" data-name="Best Times...">Best Times...</div>
+					<div class="menu-item" data-name="Best Times...">Best Times...</div>
 					<div class="menu-item-separator"></div>
 					<div class="menu-item" data-name="Exit">Exit</div>
 				</div>
@@ -44,6 +44,7 @@
 				<div class="menu-extra-button">Extra</div>
 				<div class="menu-extra-container">
 					<div class="menu-item" data-name="Game History">Game History</div>
+					<div class="menu-item-separator"></div>
 					<div class="menu-item" data-name="Settings">Settings</div>
 				</div>
 			</div>
@@ -53,8 +54,8 @@
 						<div class="content-custom-game-header">Custom Field</div>
 						<div class="content-custom-game-settings">
 							<div>
-								<div>Height:</div><div><input type="number" min="6" max="120" class="custom-game-field"></div>
-								<div>Width:</div><div><input type="number" min="6" max="120" class="custom-game-field"></div>
+								<div>Height:</div><div><input type="number" min="4" max="999" class="custom-game-field"></div>
+								<div>Width:</div><div><input type="number" min="4" max="999" class="custom-game-field"></div>
 								<div>Mines:</div><div><input type="number" min="1" max="9999" class="custom-game-field"></div>
 							</div>
 						</div>
@@ -62,7 +63,7 @@
 					</div>
 					<div class="content-best-times">
 						<div class="content-best-times-header">Fastest Mine Sweepers</div>
-						<div class="content-best-times-table"></div>
+						<div class="content-best-times-table-container"><div class="content-best-times-table"></div></div>
 						<div class="content-best-times-buttons">
 							<div><button>Reset Scores</button><button>OK</button></div>
 						</div>
@@ -74,13 +75,78 @@
 							<button>OK</button>
 						</div>
 					</div>
+					<div class="content-about">
+						<div class="content-escape-button-wrap"><div class="content-escape-button">x</div></div>
+						<div class="content-about-header">About Minesweeper</div>
+						<div class="content-about-icon-section"></div>
+						<div class="content-about-text-section">Microsoft ® Minesweeper <br>Version 5.2 <br>Copyright © 1985-2005 Microsoft Corporation <br>by Robert Donner and Curt Johnson <br><br><br><br><hr>This clone of the iconic Windows Minesweeper game is free art created by <a href="https://anthonyfucci.com">Anthony Fucci</a></div>
+					</div>
+					<div class="content-help-contents">
+						<div class="content-escape-button-wrap"><div class="content-escape-button">x</div></div>
+						<div class="content-help-contents-toc">
+							<div>📖 Minesweeper</div>
+							<div data-class-toggle="content-help-minesweeper-overview" class="text-decoration-underline">📄 Minesweeper overview</div>
+							<div data-class-toggle="content-help-to-play-minesweeper">❔ Play Minesweeper</div>
+							<div data-class-toggle="content-help-to-customize">❔ Customize the playing field</div>
+							<div data-class-toggle="content-help-strategies">📄 Strategies and tips</div>
+						</div>
+						<div class="content-help-contents-body">
+							<div class="content-help-minesweeper-overview"><div>Minesweeper overview</div><div>The object of Minesweeper is to locate all the mines as quickly as possible without uncovering any of them. If you uncover a mine, you lose the game.</div></div>
+							<div class="content-help-to-play-minesweeper display-none"><div>To play Minesweeper</div><div><ol><li>On the <strong>Game</strong> menu, click <strong>New</strong>.</li><li>To start the timer, click any square on the playing field.</li></ol><br>🗒 <strong>Notes</strong><br><ul><li>You can uncover a square by clicking it. If you uncover a mine, you lose the game.</li><li>If a number appears on a square, it indicates how many mines are in the eight squares that surround the numbered one.</li><li>To mark a square you suspect contains a mine, right-click it.</li><li>The game area consists of the playing field, a mine counter, and a timer.</li></ul></div></div>
+							<div class="content-help-to-customize display-none"><div>To customize the playing field</div><div><ol><li>On the <strong>Game</strong> menu, click <strong>Custom</strong>.</li><li>Customize the size of the field by specifying the number of squares to display vertically and horizontally, and specify the number of mines to place on the field.</li></ol></div></div>
+							<div class="content-help-strategies display-none"><div>Strategies and tips</div><div><ul><li>If you are uncertain about a square, right-click it twice to mark it with a question mark (?). Later, you can either mark the square as a mine or remove the markings by right-clicking the square again once or twice.</li><li>If you have marked all the mines around a numbered square, you can uncover the remaining squares around it by clicking the numbered square with the left and right mouse buttons simultaneously. If not all mines surrounding the numbered square have been marked, the remaining covered or unmarked squares will appear to be depressed (or flash) when the numbered square is clicked with both buttons simultaneously.</li><li>Look for common patters in numbers, which often indicate a corresponding pattern of mines. For example, the pattern 2-3-2 at the edge of a group of uncovered squares indicates a row of three mines next to the three numbers.</li></ul></div></div>
+						</div>
+					</div>
+					<div class="content-game-history">
+						<div class="content-escape-button-wrap"><div class="content-escape-button">x</div></div>
+						<div class="content-game-history-header">
+							<div class="content-game-history-header-select-label">Game History</div>
+							<select class="content-game-history-select">
+								<option value="8,8,10">8,8,10 &nbsp;&nbsp;Beg</option>
+								<option value="16,16,40">16,16,40 Int</option>
+								<option value="16,30,99">16,30,99 Exp</option>
+								<option disabled="disabled">─────────────</option>
+								<option value="losses">Recent Losses</option>
+								<option disabled="disabled">─────────────</option>
+								<option value="all">All Boards</option>
+							</select>
+							<div class="content-game-history-icons-wrap">
+								<div data-game-history-action="game-history-save" title="Save game history to csv">🖫</div>
+								<input type="file" accept=".csv" class="game-history-import-input">
+								<div data-game-history-action="game-history-import" title="Import game history from csv">🗁</div>
+								<div data-game-history-action="game-history-delete" title="Delete game history">🗑</div>
+							</div>
+						</div>
+						<div class="content-game-history-no-history">No game data available</div>
+						<div class="content-game-history-delete">
+							<div data-game-delete-action="game-delete-cancel"><span>Cancel</span></div>
+							<div data-game-delete-action="game-delete-board"><span>Delete every <span></span> game</span></div>
+							<div data-game-delete-action="game-delete-every-board"><span>*Delete all board game history</span></div>
+						</div>
+						<div class="content-game-history-table">
+							<table aria-describedby="game history">
+								<!-- View All Games -->
+								<!-- View All Best Times -->
+								<thead>
+									<tr>
+										<th scope="col" rowspan="2">Board</th>
+										<th scope="col" rowspan="2">3BV</th>
+										<th scope="col" rowspan="2">Time</th>
+										<th scope="col" rowspan="2">Date</th>
+										<th scope="colgroup" colspan="2">Performance</th>
+									</tr>
+									<tr>
+										<th scope="col">3BV/s</th>
+										<th scope="col">RQP</th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
+					</div>
 					<div class="content-settings">
 						<div class="content-settings-header"></div>
 						<div class="content-settings-grid"></div>
-					</div>
-					<div class="content-history">
-						<div class="content-history-header"></div>
-						<div class="content-history-grid"></div>
 					</div>
 				</div>
 			</div>
