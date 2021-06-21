@@ -48,6 +48,22 @@
 					<div class="menu-item" data-name="Settings">Settings</div>
 				</div>
 			</div>
+			<div class="replay-menu-frame">
+				<div class="replay-menu-container">
+					<div class="replay-menu-item" data-replay-menu="rewind-button" title="Start from beginning">◄</div>
+					<div class="replay-menu-item" data-replay-menu="play-pause-button" title="Play">ǁ►</div>
+					<div class="replay-menu-item" data-replay-menu="replay-button" title="Replay board">🖱️<!-- ⟳ --></div>
+					<div class="replay-menu-item" data-replay-menu="stats-button" title="View stats">%</div>
+				</div>
+			</div>
+			<div class="game-finished-menu-frame">
+			<!-- <div class="game-finished-menu-frame game-finished-menu-frame-enabled"> -->
+				<div class="game-finished-menu-container">					
+					<div class="game-finished-menu-item" data-game-finished-menu="watch-back-button" title="Watch game back">🎥</div>
+					<div class="game-finished-menu-item" data-game-finished-menu="replay-button" title="Replay board">🖱️</div>
+					<div class="game-finished-menu-item" data-game-finished-menu="stats-button" title="View stats">%</div>
+				</div>
+			</div>
 			<div class="feature-content-frame">
 				<div class="feature-content">
 					<div class="content-custom-game">
@@ -102,9 +118,9 @@
 						<div class="content-game-history-header">
 							<div class="content-game-history-header-select-label">Game History</div>
 							<select class="content-game-history-select">
-								<option value="8,8,10">8,8,10 &nbsp;&nbsp;Beg</option>
-								<option value="16,16,40">16,16,40 Int</option>
-								<option value="16,30,99">16,30,99 Exp</option>
+								<option value="8x8/10">8x8/10 &nbsp;&nbsp;&nbsp;Beg</option>
+								<option value="16x16/40">16x16/40 &nbsp;Int</option>
+								<option value="16x30/99">16x30/99 &nbsp;Exp</option>
 								<option disabled="disabled">─────────────</option>
 								<option value="losses">Recent Losses</option>
 								<option disabled="disabled">─────────────</option>
@@ -117,16 +133,18 @@
 								<div data-game-history-action="game-history-delete" title="Delete game history">🗑</div>
 							</div>
 						</div>
-						<div class="content-game-history-no-history">No game data available</div>
 						<div class="content-game-history-delete">
 							<div data-game-delete-action="game-delete-cancel"><span>Cancel</span></div>
 							<div data-game-delete-action="game-delete-board"><span>Delete every <span></span> game</span></div>
 							<div data-game-delete-action="game-delete-every-board"><span>*Delete all board game history</span></div>
 						</div>
+						<div class="content-game-history-context">
+							<div>🎮 Play it again</div>
+							<div>🎥 Watch it back</div>
+						</div>
+						<div class="content-game-history-no-history">No game data available</div>
 						<div class="content-game-history-table">
 							<table aria-describedby="game history">
-								<!-- View All Games -->
-								<!-- View All Best Times -->
 								<thead>
 									<tr>
 										<th scope="col" rowspan="2">Board</th>
@@ -145,8 +163,23 @@
 						</div>
 					</div>
 					<div class="content-settings">
-						<div class="content-settings-header"></div>
-						<div class="content-settings-grid"></div>
+						<div class="content-escape-button-wrap"><div class="content-escape-button">x</div></div>
+						<div class="content-settings-header">Settings</div>
+						<div class="content-settings-item-separator"></div>
+						<div class="content-settings-item-label">Beginner Board</div>
+						<div class="content-settings-item-body">
+							<div>
+								<input type="radio" id="8x8/10" name="board" value="8x8/10">
+								<label for="8x8/10">8x8/10</label>
+							</div>
+							<div>
+								<input type="radio" id="9x9/10" name="board" value="9x9/10">
+								<label for="9x9/10">9x9/10</label>
+							</div>
+						</div>
+						<div class="content-settings-item-separator"></div>
+						<div class="content-settings-item-label">Cell Size</div>
+						<div class="content-settings-item-body"></div>
 					</div>
 				</div>
 			</div>

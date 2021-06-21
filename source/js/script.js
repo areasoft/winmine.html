@@ -10,10 +10,35 @@ winmine.load_board_settings = function() {
 		winmine.width = parseInt(url_parameters.get('width'));
 		winmine.mine_count = parseInt(url_parameters.get('mines'));
 	} else {
+		if (url_parameters.has('board_mines') | url_parameters.has('board_backup_mine') | url_parameters.has('time') | url_parameters.has('action_replay')) {
+			alert('Error. Replay parameters all required together in url: \'height\' \'width\' \'mines\' \'board_mines\' \'board_backup_mine\' \'time\' and \'action_replay\'');
+			return;
+		}
 		winmine.height = 8;
 		winmine.width = 8;
 		winmine.mine_count = 10;
 	}
+	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine')) {
+		
+	}
+	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine')  && url_parameters.has('time') && url_parameters.has('action_replay')) {
+		document.getElementsByClassName('replay-menu-frame')[0].classList.add('replay-menu-frame-enabled');
+		if(winmine.width < 12) {
+			document.getElementsByClassName('extra-menu-frame')[0].style.display = 'none'; /* design decision to sacrifice Extra menu when in Replay mode on small width */
+		}
+		winmine.mines = JSON.parse(url_parameters.get('board_mines'));
+		winmine.backup_y = parseInt(url_parameters.get('board_backup_mine').split('_')[0], 10);
+		winmine.backup_x = parseInt(url_parameters.get('board_backup_mine').split('_')[1], 10);
+		winmine.game_duration = url_parameters.get('time');
+		winmine.action_replay = JSON.parse(url_parameters.get('action_replay'));
+		/* TODO: stop doing this here and do this on data save (as in, stop saving 'l' and 'm' in the same game_clicks.push() so that we just save one 'm' record in multi-trigger series as that's all that's needed). expensive uniquify: */
+		winmine.action_replay = winmine.action_replay.map(x=>x.join('|')).filter((v, i, a) => a.indexOf(v) === i).map(x=>x.split('|'));
+		/* set question mark behavior for replay based on seeing any question marks in action history. this trick would need to do more to work if a user changed the setting during the original game play */
+		const question_actions = winmine.action_replay.filter(x => x[1]==='q');
+		winmine.marks = (question_actions.length > 0) ? true : false;
+		winmine.replay_pause = true; /* begin "paused" */
+	}
+	winmine.replay_mode = (typeof winmine.action_replay !== 'undefined') ? true : false;
 };
 
 /* The counter and timer are 3 length elements, where each element is a literal "seven segment display" of 21x11 pixels: each pixel cell is assigned its A-G character position with css classes that can be toggled. */
@@ -151,52 +176,61 @@ winmine.set_timer = function(new_timer) {
 	}
 };
 
-/* some smaller data are stored in the key so we can do some searching without looping through storage values */
-/* key: pipe-separated array ex: 'w|height,width,mines|3BV|game_duration|game_end_time' */
-/* value: stringify array 1st item is name, 2nd item is mine cell positions, 3rd item is game_clicks array, a 3-length array of user game cell actions: duration,action,cell_id */
+/* smaller size data that we may want to reference for every record (e.g. game history stats) are stored in the key so we can do some querying without looping through storage values and using localStorage.getItem */
+/* key: pipe-separated '|' string of items see winmine.localStorage_key_items */
+/* value: JSON.stringify'ed array of items see winmine.localStorage_value_items */
+winmine.save_record_name = function(name) {
+	/* items in key and value aren't named, see winmine.localStorage_key_items for order/definition */
+	const storage_key_base =
+		((winmine.game_win) ? 'w' : 'l') + '|' +
+		('' + winmine.height + 'x' + winmine.width + '/' + winmine.mine_count) + '|' +
+		winmine._3bv + '|' +
+		winmine.game_clicks.filter(x => ['l'].includes(x[1])).length + '|' +
+		winmine.game_clicks.filter(x => ['m'].includes(x[1])).length + '|' +
+		winmine.game_clicks.filter(x => ['f','q','c'].includes(x[1])).length + '|' +
+		winmine.flagged_cells.length + '|' +
+		winmine.game_duration + '|' +
+		winmine.game_end_time;
+	const storage_key_old = storage_key_base + '|' + 'Anonymous';
+	const storage_key = storage_key_base + '|' + name.replace(/\||\r|\n|\t/g,''); /* simply don't allow special key name array separator character | or line breaks */
+	const storage_value = JSON.stringify([winmine.mines_orig, (winmine.backup_y+'_'+winmine.backup_x), winmine.game_clicks]);
+	localStorage.removeItem(storage_key_old);
+	localStorage.setItem(storage_key, storage_value);	
+	return(storage_key);
+};
+
 winmine.save_record = function() {
-	const game_config = [winmine.height, winmine.width, winmine.mine_count].toString();
-	const game_win_loss = (winmine.game_win) ? 'w' : 'l';
-	/* look through existing storage key names for (w)in records matching the game board config array string. then check if current game time bests them all */
-	let keys_to_search = Object.keys({ ...localStorage }).filter(value => 'w' + value.split('|')[1] === 'w' + game_config);
-	if(['8,8,10', '16,16,40', '16,30,99'].includes(game_config)) {
-		let best_times_cleared_on = localStorage.getItem('setting_best_times_cleared_on');
-		best_times_cleared_on = (best_times_cleared_on === null) ? Date.parse('1990-01-01') : Date.parse(best_times_cleared_on);
-		keys_to_search = keys_to_search.filter(x => Date.parse(x.split('|')[5]) > best_times_cleared_on);
-	}
-	let records_beat = 0;
-	keys_to_search.forEach(function(item) {
-		if(winmine.game_duration < parseInt(item.split('|')[4], 10)) {
-			records_beat++;
+	/* save immediately using configured default save name, then do follow-up best time / name-entry check */
+	const saved_key_name = winmine.save_record_name('Anonymous');
+	if(winmine.game_win) {
+		const game_config = '' + winmine.height + 'x' + winmine.width + '/' + winmine.mine_count;
+		/* look through existing storage key names for (w)in records matching the game board config and check if current game time bests them all */
+		let keys_to_search = Object.keys({ ...localStorage }).filter(function(x) {
+			return ('w' + x.split('|')[winmine.i('board')] === 'w' + game_config)
+			& (x !== saved_key_name); /* exclude the game we just saved */
+		});
+		if(['8x8/10', '16x16/40', '16x30/99'].includes(game_config)) {
+			let best_times_cleared_on = localStorage.getItem('setting_best_times_cleared_on');
+			best_times_cleared_on = (best_times_cleared_on === null) ? Date.parse('1990-01-01') : Date.parse(best_times_cleared_on);
+			keys_to_search = keys_to_search.filter(x => Date.parse(x.split('|')[winmine.i('timestamp')]) > best_times_cleared_on);
 		}
-	});
-	const is_best_time = records_beat === keys_to_search.length;
-	/* set this function up so we can save record before prompting for a name, and then save again if we get a name */
-	winmine.save_record_name = function(name) {
-		const storage_key_base =
-			game_win_loss + '|' +
-			game_config + '|' +
-			winmine._3bv + '|' +
-			winmine.game_clicks.filter(x => ['l','m'].includes(x[1])).length + '|' +
-			winmine.game_duration + '|' +
-			winmine.game_end_time;
-		const storage_key_old = storage_key_base + '|' + 'Anonymous';
-		const storage_key = storage_key_base + '|' + name.replace('|',''); /* simply don't allow special key name array separator character | */
-		const storage_value = JSON.stringify([winmine.mines, winmine.game_clicks]);
-		localStorage.removeItem(storage_key_old);
-		localStorage.setItem(storage_key, storage_value);	
-	};
-	/* save every win, not just best time, until this is more thought out or configurable */
-	winmine.save_record_name('Anonymous');
-	if(is_best_time) {
-		let difficulty = winmine.height + 'x' + winmine.width + ' ' + winmine.mine_count + ' mine ';
-		if(game_config === '8,8,10')   { difficulty = 'Beginner'; }
-		if(game_config === '16,16,40') { difficulty = 'Intermediate'; }
-		if(game_config === '16,30,99') { difficulty = 'Expert'; }
-		document.getElementsByClassName('content-best-time-game-header')[0].innerHTML = 'You have the fastest time\nfor ' + difficulty + ' level.\nPlease enter your name.';
-		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
-		document.getElementsByClassName('content-best-time-game')[0].classList.add('content-best-time-game-enabled');
-		document.querySelector('.content-best-time-game-input > input').select();
+		let records_beat = 0;
+		keys_to_search.forEach(function(x) {
+			if(winmine.game_duration < parseInt(x.split('|')[winmine.i('duration')], 10)) {
+				records_beat++;
+			}
+		});
+		const is_best_time = records_beat === keys_to_search.length;
+		if(is_best_time) {
+			let difficulty = winmine.height + 'x' + winmine.width + '/' + winmine.mine_count + ' ';
+			if(game_config === '8x8/10')   { difficulty = 'Beginner'; }
+			if(game_config === '16x16/40') { difficulty = 'Intermediate'; }
+			if(game_config === '16x30/99') { difficulty = 'Expert'; }
+			document.getElementsByClassName('content-best-time-game-header')[0].innerHTML = 'You have the fastest time\nfor ' + difficulty + ' level.\nPlease enter your name.';
+			document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
+			document.getElementsByClassName('content-best-time-game')[0].classList.add('content-best-time-game-enabled');
+			document.querySelector('.content-best-time-game-input > input').select();
+		}
 	}
 };
 
@@ -325,14 +359,11 @@ winmine.set_3bv = function() {
 	for (let i = 0; i < winmine.height; ++i) {
 		for (let j = 0; j < winmine.width; ++j) {
 			if(winmine.c[i][j] == 0) {
-				/* console.log('row: ', i, ";  col: ", j); */
 				winmine._3bv++;
 				winmine.flood_fill(i, j);
 			}
 		}
 	}
-	/* console.log('_3bv: ', winmine._3bv); */
-	/* console.log('cell_total: ', winmine.cell_total); */
 	winmine._3bv = winmine.cell_count + winmine._3bv;
 	delete winmine.c;
 	delete winmine.cell_count;
@@ -393,23 +424,27 @@ winmine.create_mine_field = function() {
 	cell_container.style.setProperty('grid-template-rows', grid_template_rows);
 	cell_container.style.setProperty('grid-template-columns', grid_template_columns);
 
-	/* create mine array */
-	winmine.mines = [];
+	/* create mine array if not already created for action replay */
+	winmine.mines = (winmine.replay_mode) ? winmine.mines : []; /* replay behavior was thrown in here late and could be better organized (right now setting winmine.cells in the same for loop as filling winmine.mines even though winmine.mines may already be set in replay mode) */
 	winmine.y_ceil = winmine.height - 1;
 	winmine.x_ceil = winmine.width - 1;
-	for (let mine = 0; winmine.mines.length < (winmine.mine_count+1); mine += 1) {
+	for(let mine = 0; winmine.mines.length < (winmine.mine_count+1); mine += 1) { /* +1 for the backup mine */
 		let y = winmine.random(0,(winmine.height-1));
 		let x = winmine.random(0,(winmine.width-1));
-		if(winmine.mines.includes(y+'_'+x)) {
-			continue;
-		} else {
-			if(winmine.mines.length == (winmine.mine_count)) {
-				/* stash one random backup mine to support first-click-is-free rule */
-				winmine.backup_y = y;
-				winmine.backup_x = x;
-				break;
+		y = (winmine.replay_mode) ? parseInt(winmine.mines[mine].split('_')[0]) : y;
+		x = (winmine.replay_mode) ? parseInt(winmine.mines[mine].split('_')[1]) : x;
+		if(!winmine.replay_mode) {
+			if(winmine.mines.includes(y+'_'+x)) {
+				continue;
 			} else {
-				winmine.mines.push(y+'_'+x);
+				if(winmine.mines.length == (winmine.mine_count)) {
+					/* stash one random backup mine to support first-click-is-free rule */
+					winmine.backup_y = y;
+					winmine.backup_x = x;
+					break;
+				} else {
+					winmine.mines.push(y+'_'+x);
+				}
 			}
 		}
 		if(winmine.cells[y][x] != 9) {
@@ -432,10 +467,14 @@ winmine.create_mine_field = function() {
 			if(y!=winmine.y_ceil && x!=winmine.x_ceil && winmine.cells[y+1][x+1]!=9) {
 				winmine.cells[y+1][x+1]++; }
 		}
+		if(winmine.replay_mode & (mine >= (winmine.mine_count-1))) {
+			break;
+		}
 	}
+	winmine.mines_orig = winmine.mines.slice(0); /* copy for saving */
 };
 
-winmine.choose_cell = function(cell_html_id) {
+winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 	if(performance.getEntriesByName('game_start').length === 0) {
 		performance.mark('game_start');
 		winmine.timer_worker = new Worker(URL.createObjectURL(winmine.start_timer_function_blob));
@@ -454,7 +493,8 @@ winmine.choose_cell = function(cell_html_id) {
 	const cell_id_string = y+'_'+x;
 
 	const game_click_code = (winmine.multi_cell) ? 'm': 'l';
-	winmine.game_clicks.push([winmine.get_game_duration(1), game_click_code, cell_id_string]);
+	const clicked_cell_id_string = (winmine.multi_cell) ? multi_cell_html_id.substring(5) : cell_id_string;
+	winmine.game_clicks.push([winmine.get_game_duration(1), game_click_code, clicked_cell_id_string]);
 	
 	/* 1. if cell is a mine and at least one cell has been chosen (not first click), game over */
 	if(winmine.cells[y][x] == 9) {
@@ -505,20 +545,20 @@ winmine.choose_cell = function(cell_html_id) {
 		winmine.timer_worker.terminate();
 		winmine.game_over = true;
 		winmine.game_win = true;
+		winmine.game_end_time = (new Date(Date.now())).toISOString();
 		const smiley_frame = document.getElementsByClassName('smiley-container')[0];
 		smiley_frame.classList.remove('face-neutral');
 		smiley_frame.classList.add('face-game-win');
-		const unflagged_mines = winmine.mines.filter(x => !winmine.flagged_cells.includes(x));
-		for (let i = 0; i < unflagged_mines.length; i += 1) {
-			const elem_id = unflagged_mines[i];
-			const elem = document.getElementById('cell_' + elem_id);
+		const unflagged_mines = winmine.mines.filter(m => !winmine.flagged_cells.includes(m));
+		for (const unflagged_mine of unflagged_mines) {
+			const elem = document.getElementById('cell_' + unflagged_mine);
 			elem.classList.add('flag');
 		}
-		winmine.set_mine_counter(0);
-		winmine.game_end_time = (new Date(Date.now())).toISOString();
-		winmine.save_record();
 		document.getElementsByClassName('scoreboard-digits-container')[1].title = winmine.game_duration;
-		return;
+		winmine.set_mine_counter(0);
+		if(!winmine.replay_mode) {
+			winmine.save_record();
+		}
 	}
 };
 
@@ -579,7 +619,9 @@ winmine.set_file_menu_item_marks = function() {
 	if(game_is_custom) {
 		document.querySelector('.menu-item[data-name=\'Custom...\']').classList.add('menu-mark');
 	}
-	if(localStorage.getItem('setting_marks') === null) {
+	if(winmine.replay_mode) {
+		winmine.marks = winmine.marks; /* set when replay_mode is set based on seeing any question mark in action replay */
+	} else if(localStorage.getItem('setting_marks') === null) {
 		winmine.marks = true; /* winmine.exe default */
 	} else {
 		winmine.marks = (localStorage.getItem('setting_marks') === 'true') ? true : false;
@@ -604,7 +646,7 @@ winmine.set_file_menu_item_marks = function() {
 	}
 	if(winmine.extra_menu) {
 		document.querySelector('.menu-item[data-name=\'Extra Menu*\']').classList.add('menu-mark');
-		document.getElementsByClassName('extra-menu-frame')[0].style.display = 'inline-block';
+		document.getElementsByClassName('extra-menu-frame')[0].classList.add('display-inline-block');
 	}
 };
 
@@ -649,8 +691,10 @@ winmine.sort_table = function(tbody, index) {
 };
 
 winmine.sort_table_cells = function(_a,_b) {
-	let a = _a.cells[winmine.sort_table_col_idx].innerText;
-	let b = _b.cells[winmine.sort_table_col_idx].innerText;
+	let a = _a.cells[winmine.sort_table_col_idx];
+	let b = _b.cells[winmine.sort_table_col_idx];
+	a = ((a.hasAttribute('data-sort-value')) ? a.getAttribute('data-sort-value') : a.innerText);
+	b = ((b.hasAttribute('data-sort-value')) ? b.getAttribute('data-sort-value') : b.innerText);
 	a = a.replace(/\,/g, '');
 	b = b.replace(/\,/g, '');
 	if(winmine.sort_table_asc) {
@@ -658,7 +702,6 @@ winmine.sort_table_cells = function(_a,_b) {
 		a = b;
 		b = temp;
 	}
-	/* if(a.match(/^[0-9]+$/) && b.match(/^[0-9]+$/)) { */
 	if(a.match(/^-?[0-9]\d*(\.\d+)?$/) && b.match(/^-?[0-9]\d*(\.\d+)?$/)) {
 			return parseFloat(a) - parseFloat(b);
 	}	else {
@@ -672,31 +715,45 @@ winmine.sort_table_cells = function(_a,_b) {
 	}
 };
 /* localStorage game history variable definition (with example values) */
-/* this defines the order for how data is saved to localStorage and saved/imported for csv, important because data items/objects aren't named when saved to localStorage (byte saving) */
+/* this defines the order for how data is saved to localStorage and saved/imported for csv, important because data items/objects aren't named when saved to localStorage, we get them by index */
+/* see winmine.i() examples for help writing value lookups by referencing the index by name in case things change */
 winmine.localStorage_key_items = {
 	'outcome': 'w',
-	'board': '8x8(10)',
+	'board': '8x8/10',
 	'3bv': '4',
-	'clicks': '6',
+	'left_clicks': '2',
+	'multi_clicks': '1',
+	'right_clicks': '3',
+	'flags_used': '3',
 	'duration': '5.305',
 	'timestamp': '2021-04-15T14:35:57.299Z',
 	'name': 'Anonymous'
 };
 winmine.localStorage_value_items = {
 	'mines': '["2_5","1_5","2_7","1_6","5_2","0_7","1_7","4_5","0_0","2_6"]',
+	'backup_mine': '0_1',
 	'action_replay': '[["0.0","l","0_6"],["0.3","l","3_6"],["0.5","l","4_4"],["0.7","l","3_2"],["2.0","f","5_2"],["2.9","f","4_5"],["3.4","m","3_5"],["3.8","f","2_5"],["4.7","f","1_5"],["5.3","m","0_5"]]'
 };
+winmine.i = function(itemname, kv = 'key') {
+	if(kv === 'key') {
+		return(Object.keys(winmine.localStorage_key_items).indexOf(itemname));
+	} else {
+		return(Object.keys(winmine.localStorage_value_items).indexOf(itemname));
+	}
+}
 winmine.save_game_history = function() {
-	let csv_content = 'data:text/csv;charset=utf-8,'
+	let csv_content = 'data:text/csv;charset=utf-8,';
 	const header = Object.keys(winmine.localStorage_key_items).join(',') + ',' + Object.keys(winmine.localStorage_value_items).join(',');
 	csv_content += header + '\r\n';
 	const winning_keys = Object.keys({ ...localStorage }).filter(x => x.substring(0,2)==='w|');
 	winning_keys.forEach(function(key_name) {
-		const key_name_arr = key_name.split('|');
+		let key_items = key_name.split('|');
 		/* construct csv, escape double quotes */
-		let row = key_name_arr.map(function(item) { return('\"' + item.replace(/"/g, '\"\"') + '\"'); }).join(',');
-		const value_items =	JSON.parse(localStorage.getItem(key_name)); /* look up rest of items stored in localStore item */
-		row += ',' + value_items.map(function(item) { return('\"' + JSON.stringify(item).replace(/"/g, '\"\"') + '\"'); }).join(',');
+		key_items = key_items.map(function(item) { return('\"' + item.replace(/"/g, '\"\"') + '\"'); }).join(',');
+		let value_items =	JSON.parse(localStorage.getItem(key_name));
+		/* JSON.stringify any variable not already a string (our big array items) */
+		value_items = value_items.map(function(item) { item = (typeof item === 'string') ? item : JSON.stringify(item); return('\"' + item.replace(/"/g, '\"\"') + '\"'); }).join(',');
+		const row = key_items + ',' + value_items;
 		csv_content += row + "\r\n";
 	});
 	const encoded_uri = encodeURI(csv_content);
@@ -765,7 +822,14 @@ winmine.import_game_history = function(csv) {
 			things_to_save.push(row[header.indexOf(column)]);
 		}
 		const localStorage_key_things = things_to_save.slice(0, (variables_in_key_name.length));
-		const localStorage_item_things = things_to_save.slice(variables_in_key_name.length, expected_column_names.length).map(function(x) { return JSON.parse(x); }); /* item values are stored with JSON.stringify */
+		const localStorage_item_things = things_to_save.slice(variables_in_key_name.length, expected_column_names.length).map(function(x) {
+			/* check for and parse arrays */
+			if(x.charAt(0) === '[') {
+				return JSON.parse(x);
+			} else {
+				return x;
+			}
+		});
 		localStorage.setItem(localStorage_key_things.join('|'), JSON.stringify(localStorage_item_things));
 	}
 	/* trigger a close-reopen of the game history menu content for a refresh effect */
@@ -777,8 +841,8 @@ winmine.import_game_history = function(csv) {
 winmine.fill_game_history_table = function(tbody, select_option_value) {
 	tbody.textContent = ''; /* keep it simple and just delete all the table records each new request */
 	let hist = winmine.hist;
-	/* board has pattern of two commas */
-	if(select_option_value.split(',').length-1 === 2) {
+	/* check for board pattern of NxN/M */
+	if(select_option_value.match(/x|\//g).length === 2) {
 		hist = hist.filter(item => item[1] === select_option_value);
 	}
 	if(hist.length === 0) {
@@ -789,11 +853,11 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 	for (let i = 0; i < hist.length; i++) {
 		const h = hist[i];
 		/* name items for sanity */
-		const board = h[1];
-		const _3bv = h[2];
-		const clicks = h[3];
-		const time = h[4];
-		const datetime = h[5];
+		const board = h[winmine.i('board')];
+		const _3bv = h[winmine.i('3bv')];
+		const clicks = parseInt(h[winmine.i('left_clicks')], 10) + parseInt(h[winmine.i('multi_clicks')], 10);
+		const time = h[winmine.i('duration')];
+		const datetime = h[winmine.i('timestamp')];
 		tbody.insertRow(-1);
 		const new_row = tbody.rows[i];
 		new_row.insertCell(0);
@@ -802,50 +866,107 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 		new_row.cells[1].innerHTML = _3bv;
 		new_row.cells[1].title = clicks + ' / ' + _3bv;
 		new_row.insertCell(2);
-		new_row.cells[2].innerHTML = time;
+		new_row.cells[2].innerHTML = parseFloat(time).toFixed(3);
 		new_row.insertCell(3);
-		new_row.cells[3].innerHTML = datetime.substring(2,10);
+		new_row.cells[3].innerHTML = new Date(datetime).toLocaleDateString('en-US', {	day: 'numeric',	month: 'numeric',	year: '2-digit', }); /* 'sv' (sweden) uses ISO 8601 YYYY-MM-DD format */
+		new_row.cells[3].title = new Date(datetime).toLocaleTimeString();
+		new_row.cells[3].setAttribute('data-sort-value', datetime);
 		new_row.insertCell(4);
 		new_row.cells[4].innerHTML = (_3bv / time).toFixed(2);
 		new_row.insertCell(5);
 		new_row.cells[5].innerHTML = (time / (_3bv / time)).toFixed(0);
 	}
+
+	/* do some visual hiding/minifying of columns for small boards */
+	if(winmine.width < 14) {
+		/* hide performance columns to the right */
+		document.querySelectorAll(
+			'.content-game-history-table table thead tr:nth-child(1) th:nth-child(n+5),' +
+			'.content-game-history-table table thead tr:nth-child(2) th,' +
+			'.content-game-history-table table tbody tr td:nth-child(n+5)'
+		).forEach(function(x) {
+			x.classList.add('display-none');
+		});
+	}
+	if(winmine.width < 11) {
+		/* minify Boards column */
+		document.querySelectorAll('.content-game-history-table table thead tr:nth-child(1) th:nth-child(1)').forEach(function(x) {
+			x.innerText = 'B';
+			x.title = 'Board';
+		});
+		document.querySelectorAll('.content-game-history-table table tbody tr td:nth-child(1)').forEach(function(x) {
+			x.title = x.innerText;
+			x.setAttribute('data-sort-value', x.innerText);
+			x.innerText = '*';
+		});
+	}
+	if(winmine.width < 9) {
+		document.querySelectorAll('.content-game-history-table table tbody td').forEach(function(x) {
+			x.style.padding = '3px';
+		});
+	}
 };
+
+winmine.replay_game = function() {
+	winmine.replay_action_idx = winmine.replay_action_idx || 0; /* ongoing counter for pause/play, set on setTimeout success */
+	winmine.replay_setTimeout = []; /* push setTimeout calls here so we can clear them when pause is selected by user */
+	let replay_action_duration = 0; /* get sum of time passed from every action up until the one last paused on */
+	for (let i = 0; i < winmine.replay_action_idx; i++) {
+		replay_action_duration = replay_action_duration + (parseFloat(winmine.action_replay[i+1][0], 10) - parseFloat(winmine.action_replay[i][0], 10));
+	}
+	console.log(winmine.replay_action_idx);
+	console.log(replay_action_duration);
+		/* for (const action of winmine.action_replay.slice(winmine.replay_action_idx)) { */
+			for (let i = winmine.replay_action_idx; i < winmine.action_replay.length; i++) {
+			const action = winmine.action_replay[i];
+			const action_delay = (action[0]*1000) - (replay_action_duration*1000);
+			const timeout_id = setTimeout(function() {
+				if(action[1] == 'l') {
+					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button0': true } }));
+					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button0': true } }));
+				} else if(action[1] == 'm') {
+					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button0': true, 'button2': true } }));
+					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button0': true, 'button2': true } }));
+				} else if(['f','q','c'].includes(action[1])) {
+					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button2': true } }));
+					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button2': true } }));
+				}
+				winmine.replay_action_idx = winmine.replay_action_idx + 1;
+			}, action_delay);
+			winmine.replay_setTimeout.push(timeout_id);
+		}
+	};
 
 winmine.select_menu_item = function(event) {
 	/* in case menu content is already open, remove them through their -enabled class name */
 	for (let value of document.getElementsByClassName('feature-content')) {
-			const div_children = value.children;
-			for (let item of div_children) {
-				item.classList.forEach(function(c) {
-					if(c.includes('-enabled')) {
-						item.classList.remove(c);
-					}
-				});
-			}
+		const div_children = value.children;
+		for (let item of div_children) {
+			item.classList.forEach(function(c) {
+				if(c.includes('-enabled')) {
+					item.classList.remove(c);
+				}
+			});
+		}
 	}
 
 	const item_text = event.target.getAttribute('data-name');
 	if(item_text === 'New') {
 		location.reload();
-		return;
-	}
-	if(item_text === 'Beginner') {
+
+	} else if(item_text === 'Beginner') {
 		const new_window_salt = winmine.random(100000,999999);
 		window.open('?height=8&width=8&mines=10', 'Beginner' + '_' + new_window_salt, 'width=148,height=211,top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
-		return;
-	}
-	if(item_text === 'Intermediate') {
+
+	} else if(item_text === 'Intermediate') {
 		const new_window_salt = winmine.random(100000,999999);
 		window.open('?height=16&width=16&mines=40', 'Intermediate' + '_' + new_window_salt, 'width=276,height=339,top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
-		return;
-	}
-	if(item_text === 'Expert') {
+
+	} else if(item_text === 'Expert') {
 		const new_window_salt = winmine.random(100000,999999);
 		window.open('?height=16&width=30&mines=99', 'Expert' + '_' + new_window_salt, 'width=500,height=339,top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
-		return;
-	}
-	if(item_text === 'Custom...') {
+
+	} else if(item_text === 'Custom...') {
 		event.target.parentNode.classList.remove('menu-container-top');
 		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 		document.getElementsByClassName('content-custom-game')[0].classList.add('content-custom-game-enabled');
@@ -856,9 +977,8 @@ winmine.select_menu_item = function(event) {
 		document.getElementsByClassName('custom-game-field')[0].value = saved_custom_field_settings[0];
 		document.getElementsByClassName('custom-game-field')[1].value = saved_custom_field_settings[1];
 		document.getElementsByClassName('custom-game-field')[2].value = saved_custom_field_settings[2];
-		return;
-	}
-	if(item_text === 'Marks (?)') {
+
+	} else if(item_text === 'Marks (?)') {
 		if(event.target.classList.contains('menu-mark')) {
 			event.target.classList.remove('menu-mark');
 			localStorage.setItem('setting_marks', 'false');
@@ -872,9 +992,8 @@ winmine.select_menu_item = function(event) {
 			localStorage.setItem('setting_marks', 'true');
 			winmine.marks = true;
 		}
-		return;
-	}
-	if(item_text === 'Color') {
+
+	} else if(item_text === 'Color') {
 		if(event.target.classList.contains('menu-mark')) {
 			event.target.classList.remove('menu-mark');
 			document.documentElement.style.setProperty('filter', 'grayscale(100%)');
@@ -885,26 +1004,24 @@ winmine.select_menu_item = function(event) {
 			document.documentElement.style.removeProperty('filter');
 			localStorage.setItem('setting_color', 'true');
 			winmine.color = true;
-			
 		}
-		return;
-	}
-	if(item_text === 'Best Times...') {
+
+	} else if(item_text === 'Best Times...') {
 		const classic_best_times_row_html = function(saved_key_names, difficulty) {
 			let difficulty_config = '';
-			if(difficulty === 'beginner') {	difficulty_config = '8,8,10';	}
-			if(difficulty === 'intermediate') {	difficulty_config = '16,16,40';	}
-			if(difficulty === 'expert') {	difficulty_config = '16,30,99';	}
+			if(difficulty === 'beginner') {	difficulty_config = '8x8/10';	}
+			if(difficulty === 'intermediate') {	difficulty_config = '16x16/40';	}
+			if(difficulty === 'expert') {	difficulty_config = '16x30/99';	}
 			let best_times_cleared_on = localStorage.getItem('setting_best_times_cleared_on');
 			best_times_cleared_on = (best_times_cleared_on === null) ? Date.parse('1990-01-01') : Date.parse(best_times_cleared_on);
-			let result = saved_key_names.filter(value => 'w|' + value.split('|')[1] + '|' === 'w|' + difficulty_config + '|')
-				.filter(value => Date.parse(value.split('|')[5]) > best_times_cleared_on);
-			const best_time_idx = Math.min.apply(null, result.map(function(x){return x.split('|')[4]; })).toFixed(3);
-			result = result[result.findIndex(x => x.split('|')[4] === best_time_idx)];
-			result = (typeof(result)=='undefined') ? 'w|-1|-1|-1|999|-1|Anonymous'.split('|') : result.split('|');
+			let result = saved_key_names.filter(value => 'w|' + value.split('|')[winmine.i('board')] + '|' === 'w|' + difficulty_config + '|')
+				.filter(value => Date.parse(value.split('|')[winmine.i('timestamp')]) > best_times_cleared_on);
+			const best_time_idx = Math.min.apply(null, result.map(function(x){return x.split('|')[winmine.i('duration')]; })).toFixed(3);
+			result = result[result.findIndex(x => x.split('|')[winmine.i('duration')] === best_time_idx)];
+			result = (typeof(result)=='undefined') ? 'w|-1|-1|-1|-1|-1|999|-1|Anonymous'.split('|') : result.split('|');
 			const record_difficulty = difficulty.charAt(0).toUpperCase() + difficulty.slice(1)+':';
-			const record_score = (winmine.width > 12) ? Math.round(result[4]) + ' seconds' : Math.round(result[4]);
-			const record_name = (/* winmine.width < 12 */false) ? result[6].substring(0,4) : result[6];
+			const record_score = (winmine.width > 12) ? Math.round(result[winmine.i('duration')]) + ' seconds' : Math.round(result[winmine.i('duration')]);
+			const record_name = (/* winmine.width < 12 */false) ? result[winmine.i('name')].substring(0,4) : result[winmine.i('name')];
 			return('<div>' + record_difficulty + '</div><div title=\"'+result[4]+' seconds\">' + record_score + '</div><div>' + record_name + '</div>');
 		};
 		event.target.parentNode.classList.remove('menu-container-top');
@@ -913,44 +1030,43 @@ winmine.select_menu_item = function(event) {
 		const keys_to_search = Object.keys({ ...localStorage });
 		const table = document.getElementsByClassName('content-best-times-table')[0];
 		table.innerHTML = classic_best_times_row_html(keys_to_search, 'beginner') + classic_best_times_row_html(keys_to_search, 'intermediate') + classic_best_times_row_html(keys_to_search, 'expert');
-		return;
-	}
-	if(item_text === 'Exit') {
+
+	} else if(item_text === 'Exit') {
 		window.close();
-		return;
-	}
-	if(item_text === 'Contents') {
+
+	} else if(item_text === 'Contents') {
 		event.target.parentNode.classList.remove('menu-container-top');
 		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 		document.getElementsByClassName('content-help-contents')[0].classList.add('content-help-contents-enabled');
-		return;
-	}
-	if(item_text === 'About Minesweeper...') {
+
+	} else if(item_text === 'About Minesweeper...') {
 		event.target.parentNode.classList.remove('menu-container-top');
 		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 		document.getElementsByClassName('content-about')[0].classList.add('content-about-enabled');
-		return;
-	}
-	if(item_text === 'Extra Menu*') {
+
+	} else if(item_text === 'Extra Menu*') {
 		const extra_menu = document.getElementsByClassName('extra-menu-frame')[0];
 		if(event.target.classList.contains('menu-mark')) {
-			extra_menu.style.display = 'none';
+			extra_menu.classList.remove('display-inline-block');
 			event.target.classList.remove('menu-mark');
 			localStorage.setItem('setting_extra_menu', 'false');
 		} else {
-			extra_menu.style.display = 'inline-block';
+			extra_menu.classList.add('display-inline-block');
 			event.target.classList.add('menu-mark');
 			localStorage.setItem('setting_extra_menu', 'true');
 		}
-		return;
-	}
-	if(item_text === 'Game History') {
+
+	} else if(item_text === 'Game History') {
 		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 		document.getElementsByClassName('content-game-history')[0].classList.add('content-game-history-enabled');
 		document.getElementsByClassName('content-game-history-delete')[0].classList.remove('content-game-history-delete-enabled');
+		document.getElementsByClassName('content-game-history-no-history')[0].classList.remove('content-game-history-no-history-enabled');
 		const winning_keys = Object.keys({ ...localStorage }).filter(x => x.substring(0,2)==='w|');
 		/* stop here if history object still matches localStorage */
 		if(winning_keys.length === winmine.hist.length) {
+			if(winning_keys.length === 0) {
+				document.getElementsByClassName('content-game-history-no-history')[0].classList.add('content-game-history-no-history-enabled');
+			}
 			return;
 		} else {
 			winmine.hist = [];
@@ -960,7 +1076,7 @@ winmine.select_menu_item = function(event) {
 			winmine.hist.push(index);
 			const new_item = item.split('|');
 			winmine.hist[index] = new_item;
-			hist_datetimes.push(new_item[5]);
+			hist_datetimes.push(new_item[8]);
 		});
 		const unique_boards = [];
 		winmine.hist.forEach(function(item) { if(!unique_boards.includes(item[1])) { unique_boards.push(item[1]); }});
@@ -976,24 +1092,26 @@ winmine.select_menu_item = function(event) {
 			select_element.options[select_element.options.length-1].classList.add('select-option-is-new');
 			unique_boards.forEach(function(item) {
 				if(item === undefined) { return; }
-				if(!['8,8,10','16,16,40','16,30,99'].includes(item)) {
+				if(!['8x8/10','16x16/40','16x30/99'].includes(item)) {
 					select_element.options.add(new Option(item, item));
 					select_element.options[select_element.options.length-1].classList.add('select-option-is-new');
 				}
 			});
 		}
-
 		const sorted = hist_datetimes.slice().sort(function(a, b) {
 			return new Date(a) - new Date(b);
 		});
-		const recent_games_datetimes = sorted.slice(-5);
-		const recent_games = winmine.hist.filter(i => recent_games_datetimes.includes(i[5]));
+		const recent_games_datetimes = sorted.slice(-8);
+		const recent_games = winmine.hist.filter(i => recent_games_datetimes.includes(i[8]));
 		const recent_games_boards = []; recent_games.forEach(function(item) { recent_games_boards.push(item[1]); });
 		const recent_board = winmine.get_most_common_item_in_array(recent_games_boards);
-
 		select_element.value = recent_board;
 		select_element.dispatchEvent(new Event('change'));
-		return;
+
+	} else if(item_text === "Settings") {
+		event.target.parentNode.classList.remove('menu-container-top');
+		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
+		document.getElementsByClassName('content-settings')[0].classList.add('content-settings-enabled');
 	}
 };
 
@@ -1008,11 +1126,11 @@ document.addEventListener('DOMContentLoaded', function() {
 	winmine.set_file_menu_item_marks();
 
 	winmine.cleared = 0; /* clear_mine_field() increments this to determine game win */
-	winmine.flagged_cells = []; /* cells are pushed here contextmenu (right click) */
-	winmine.marked_cells = []; /* another right click contextmenu, for question mark cells */
+	winmine.flagged_cells = []; /* cells are pushed here on right click */
+	winmine.marked_cells = []; /* another right click, for question mark cells */
 	winmine.game_clicks = []; /* record actions for game save/replay */
-	winmine.game_over = false;
-	winmine.hist = [];
+	winmine.game_over = false; /* set to true on win */
+	winmine.hist = []; /* when Game History is opened, gets filled for history table and stats */
 
 	/* file menu container events are delegated from the menu item container */
 	document.getElementsByClassName('file-menu')[0].addEventListener('mouseup', function(event) {
@@ -1021,9 +1139,42 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 
-	/* prevent default right click on everything below file menu */
-	document.querySelector('.game-window-frame').addEventListener('contextmenu', function(event) {
+	/* simpler to just prevent default right click contextmenu on entire page */
+	document.body.addEventListener('contextmenu', function(event) {
 		event.preventDefault();
+	});
+
+	document.getElementsByClassName('content-game-history-table')[0].addEventListener('contextmenu', function(event) {
+		const selected_row = event.target.parentNode;
+		if(selected_row.cells[3].hasAttribute('data-sort-value')) {
+			selected_row.classList.add('content-game-history-context-row-enabled');
+			winmine.game_history_table_context_row = selected_row; /* stash so we can remove row style class when contextmenu is removed */
+			const context = document.getElementsByClassName('content-game-history-context')[0];
+			const primary_key_timestamp = selected_row.cells[3].getAttribute('data-sort-value');
+			const key = winmine.hist.filter(function(x) { return primary_key_timestamp == x[winmine.i('timestamp')]; })[0];
+			const key_name = key.join('|');
+			const item_value = JSON.parse(localStorage.getItem(key_name));
+			const height = key[winmine.i('board')].split('x')[0];
+			const width = key[winmine.i('board')].split('x')[1].split('/')[0];
+			const mine_count = key[1].split('x')[1].split('/')[1];
+			const play_again_url = '?height=' + height + '&width=' + width + '&mines=' + mine_count + '&board_mines=' + JSON.stringify(item_value[winmine.i('mines', 'v')]) + '&board_backup_mine=' + item_value[winmine.i('backup_mine', 'v')];
+			const watch_replay_url = play_again_url + '&time=' + key[winmine.i('duration')] + '&action_replay=' + JSON.stringify(item_value[winmine.i('action_replay', 'v')]);
+			context.children[0].setAttribute('data-action-url', play_again_url);
+			context.children[1].setAttribute('data-action-url', watch_replay_url);
+			context.classList.add('content-game-history-context-enabled');
+			const feature_content_frame = document.getElementsByClassName('feature-content-frame')[0];
+			const scroll_y_offset = feature_content_frame.scrollTop - 14;
+			const click_near_bottom_offset = ((feature_content_frame.clientHeight - event.clientY) < 50) ? -50 : 0;
+			context.style.left = (event.clientX) + 'px';
+			context.style.top = (event.clientY + scroll_y_offset + click_near_bottom_offset) + 'px';
+		}
+	});
+	document.getElementsByClassName('content-game-history-table')[0].addEventListener('mouseup', function(event) {
+		if(typeof winmine.game_history_table_context_row !== 'undefined') {
+			document.getElementsByClassName('content-game-history-context')[0].classList.remove('content-game-history-context-enabled');
+			winmine.game_history_table_context_row.classList.remove('content-game-history-context-row-enabled');
+			delete winmine.game_history_table_context_row;
+		}
 	});
 
 	/* gameplay cell events are delegated by the .cell-container */
@@ -1061,8 +1212,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 	cell_container.addEventListener('mousedown', function(event) {
 		if(winmine.game_over) { return; }
-		if(event.button === 0) { winmine.mouse_is_down = true; }
-		if(event.button === 2) { winmine.mouse2_is_down = true; }
+		if(event.button === 0 || event.detail.button0) { winmine.mouse_is_down = true; }
+		if(event.button === 2 || event.detail.button2) { winmine.mouse2_is_down = true; }
 		if(winmine.mouse_is_down && winmine.mouse2_is_down) {
 			const coords = winmine.id_as_y_x(event.target.id);
 			const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
@@ -1089,8 +1240,8 @@ document.addEventListener('DOMContentLoaded', function() {
 	cell_container.addEventListener('mouseup', function(event) {
 		if(winmine.game_over) { return; }
 		/* mouseup is managing the two ways two clear cell(s), direct left click or indirect left+right click */
-		if(event.button === 0) { winmine.mouse_is_down = false; }
-		if(event.button === 2) { winmine.mouse2_is_down = false; }
+		if(event.button === 0 || event.detail.button0) { winmine.mouse_is_down = false; }
+		if(event.button === 2 || event.detail.button2) { winmine.mouse2_is_down = false; }
 		if(winmine.multi_cell) {
 			if(event.target.classList.length >= 2) {
 				const coords = winmine.id_as_y_x(event.target.id);
@@ -1107,7 +1258,7 @@ document.addEventListener('DOMContentLoaded', function() {
 					cells_to_choose.forEach(function (element) {
 						const e = document.getElementById('cell_'+element);
 						if(e.classList.contains('clear')) { return; }
-						winmine.choose_cell('cell_'+element);
+						winmine.choose_cell('cell_'+element, event.target.id);
 						e.classList.remove('question'); /* marked cells are triggered like normal cells. remove class to prevent confusion */
 					});
 				}
@@ -1124,7 +1275,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 			return;
 		}
-		if(event.button === 2) { return; }
+		if(event.button === 2 || event.detail.button2) { return; }
 		if(event.target.classList.contains('flag')) { return; }
 		if(event.target.classList.contains('question')) { return; }
 		event.target.classList.remove('active');
@@ -1337,10 +1488,15 @@ document.addEventListener('DOMContentLoaded', function() {
  			document.querySelector('.content-game-history .content-escape-button').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
 			document.querySelector('[data-name="Game History"]').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
 		} else if(item_text === 'game-delete-every-board') {
-			const keys_to_delete = Object.keys({ ...localStorage }).filter(function(x) { return ['w|','l|'].includes(x.substring(0,2)); })
+			const keys_to_delete = Object.keys({ ...localStorage }).filter(function(x) { return ['w|','l|'].includes(x.substring(0,2)); });
 			for(const key_name of keys_to_delete) {
 				localStorage.removeItem(key_name);
 			}
+			winmine.hist = [];
+			document.querySelector('.content-game-history .content-escape-button').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
+			document.querySelector('[data-name="Game History"]').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
+			document.getElementsByClassName('content-game-history-select')[0].selectedIndex = 0;
+			document.querySelectorAll('.content-game-history-select option').forEach(function(e, i) { if(i > 7) { e.parentNode.removeChild(e) } });
 		}
 	});
 
@@ -1364,6 +1520,38 @@ document.addEventListener('DOMContentLoaded', function() {
 		toggle_item.classList.add('display-block');
 	});
 
+document.getElementsByClassName('replay-menu-container')[0].addEventListener('mouseup', function(event) {
+	const action_name = event.target.getAttribute('data-replay-menu');
+	if(action_name === 'play-pause-button') {
+		if(document.getElementsByClassName('replay-mode-html-body-overlay').length === 0) {
+			const window_frame = document.createElement('div');
+			window_frame.classList.add('replay-mode-html-body-overlay');
+			document.body.prepend(window_frame);
+		}
+		winmine.replay_pause = (winmine.replay_pause) ? false : true;
+		if(winmine.replay_pause) {
+			winmine.replay_setTimeout.forEach(function(item) { clearTimeout(item); });
+			
+		} else {
+			winmine.replay_game();
+		}
+	}
+});
+
+	document.getElementsByClassName('content-game-history-context')[0].addEventListener('mouseup', function(event) {
+		if(event.target.hasAttribute('data-action-url')) {
+			const new_window_url = event.target.getAttribute('data-action-url');
+			const width = new_window_url.match(/width=(.*?)&/)[1];
+			const height = new_window_url.match(/height=(.*?)&/)[1];
+			const window_width = (width*16)+20;
+			const window_height = (height*16)+83;
+			const new_window_salt = winmine.random(100000,999999);
+			window.open(new_window_url, 'Replay' + '_' + new_window_salt, 'width= ' + window_width + ',height=' + window_height + ',top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
+			document.getElementsByClassName('content-game-history-context')[0].classList.remove('content-game-history-context-enabled');
+			winmine.game_history_table_context_row.classList.remove('content-game-history-context-row-enabled');
+		}
+	});
+
 	/* catch the close button for any enabled item within feature-content-frame and remove any etc'-enabled' class */
 	document.getElementsByClassName('feature-content-frame')[0].addEventListener('mouseup', function(event) {
 		const feature_content_frame = document.getElementsByClassName('feature-content-frame')[0];
@@ -1377,4 +1565,12 @@ document.addEventListener('DOMContentLoaded', function() {
 			});
 		}
 	});
+
+
+	/* end document load events: */
+	/* trigger game rewatch replay if in replay mode */
+	if(winmine.replay_mode) {
+		document.querySelector('[data-replay-menu="play-pause-button"]').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
+	}
+
 });

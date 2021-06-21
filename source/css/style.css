@@ -102,6 +102,60 @@ html, body {
 	background-position: 6px 50%;
 }
 
+.replay-menu-frame,
+.game-finished-menu-frame {
+	position: fixed;
+	right: 0px;
+	display: none;
+	font-size: 0;
+	height:16px;
+}
+.replay-menu-frame-enabled,
+.game-finished-menu-frame-enabled {
+  display: inline-block;
+}
+.replay-menu-container,
+.game-finished-menu-container {
+
+/*   display: inline-grid;
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: center; */
+}
+.replay-menu-item,
+.game-finished-menu-item {
+	display: inline-block;
+	font-family: 'Segoe UI';
+	font-size: 9pt;
+	padding-right: 2px;
+	padding-bottom: 1px;
+	padding-left: 2px;
+	padding-top: 1px;
+}
+.replay-menu-item {
+	font-family: 'Arial';
+}
+.replay-menu-item:hover,
+.game-finished-menu-item:hover {
+	background-color: rgba(209, 226, 242);
+}
+.replay-menu-item-enabled {
+	background-color: rgba(209, 226, 242);
+}
+.replay-menu-item[data-replay-menu="stats-button"],
+.game-finished-menu-item[data-game-finished-menu="stats-button"] {
+	padding-right: 4px;
+	padding-left: 2px;
+}
+
+.replay-mode-html-body-overlay {
+	position: absolute;
+	width: calc(100vw - 4px);
+	height: calc(100vh - 4px);
+	border: 2px solid rgba(255, 0, 0, 0.5);
+	z-index: 1000;
+	pointer-events: none
+}
 /* Frame and border stuff */
 .game-window-frame {
 	border-top: 3px solid rgba(255,255,255);
@@ -318,6 +372,7 @@ html, body {
 	position: absolute;
 	display: none;
 	max-height: calc(100vh - 30px);
+	max-width: calc(100vw - 4px);
 	overflow-y: scroll;
 	scrollbar-width: none;
 }
@@ -556,8 +611,8 @@ li {
 	padding-left: 10px;
 } */
 .content-game-history-icons-wrap div {
-	padding-left: 10px;
 	font-size: 16px;
+	padding-right: 10px;
 }
 .content-game-history-icons-wrap div[data-game-history-action="game-history-save"]:hover,
 .content-game-history-icons-wrap div[data-game-history-action="game-history-import"]:hover {
@@ -566,9 +621,9 @@ li {
 .content-game-history-icons-wrap div[data-game-history-action="game-history-delete"]:hover {
 	color: rgb(153, 0, 0);
 }
-.content-game-history-table {
-	padding-top: 5px;
-}
+/* .content-game-history-table {
+	padding-bottom: 24px;
+} */
 .content-game-history-table > table {
 	border-collapse: collapse;
 }
@@ -601,11 +656,39 @@ li {
 .content-game-history-table > table > tbody td:first-child {
 	text-align: left;
 }
+.content-game-history-context {
+	position: absolute;
+	overflow: hidden;
+	display: none;
+	background-color: rgba(245,246,247);
+	border: 1px solid rgba(161,197,233);
+}
+.content-game-history-context-enabled {
+	display: block;
+}
+.content-game-history-context div {
+	padding: 2px;
+	font-family: 'Segoe UI';
+	font-size: 9pt;
+	color: #000000;
+	white-space: nowrap;
+}
+.content-game-history-context div:hover {
+	background-color: rgba(209, 226, 242);
+}
+.content-game-history-context-row-enabled {
+	background-color: rgba(209, 226, 242) !important;
+}
+
 .content-game-history-select {
 	font-family: Consolas;
 }
 /* .content-game-history-select option:nth-child(n+3):nth-child(-n+7) { */
-	.content-game-history-select option {
+.content-game-history-select {
+	margin-right: 10px;
+	margin-bottom: 5px;
+}
+.content-game-history-select option {
 	border-bottom: 1px solid black;
 }
 .game-history-import-input {
@@ -645,7 +728,7 @@ li {
 .content-game-history-no-history-enabled {
 	display: block;
 }
-.content-game-history-no-history-enabled + div + div {
+.content-game-history-no-history-enabled + div {
 	display: none;
 }
 
@@ -668,6 +751,33 @@ li {
 	background-color: rgba(255, 255, 0, 0.1);
 }
 
+.content-settings {
+	display: none;
+}
+.content-settings-enabled {
+	display: block;
+}
+.content-settings-header {
+	padding-bottom: 6px;
+	font-size: 14px;
+	font-weight: bold;
+}
+.content-settings-item-label {
+	padding-bottom: 6px;
+	font-size: 12px;
+	font-weight: bold;
+}
+.content-settings-item-body label {
+	display: inline-block;
+	vertical-align: middle;
+	padding-bottom: 4px;
+	margin-bottom: 4px;
+}
+.content-settings-item-separator {
+	margin-top: 6px;
+	height: 1px;
+	background-color: #cccccc;
+}
 
 /* global things */
 .display-none {
@@ -675,6 +785,9 @@ li {
 }
 .display-block {
 	display: block;
+}
+.display-inline-block {
+	display: inline-block;
 }
 .text-decoration-none {
 	text-decoration: none;
