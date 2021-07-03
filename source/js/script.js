@@ -19,13 +19,11 @@ winmine.load_board_settings = function() {
 		winmine.mine_count = 10;
 	}
 	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine')) {
-		
+		/* replay a previous board. this should show a refresh icon always on by default in the top right menu to indicate it is a replay. clicking the replay icon will refresh the page too. once game is played and ends, show the usual menu showed when game ends */
+		document.getElementsByClassName('is-prev-game-menu-frame')[0].classList.add('is-prev-game-menu-frame-enabled');
 	}
-	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine')  && url_parameters.has('time') && url_parameters.has('action_replay')) {
-		document.getElementsByClassName('replay-menu-frame')[0].classList.add('replay-menu-frame-enabled');
-		if(winmine.width < 12) {
-			document.getElementsByClassName('extra-menu-frame')[0].style.display = 'none'; /* design decision to sacrifice Extra menu when in Replay mode on small width */
-		}
+	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine') && url_parameters.has('time') && url_parameters.has('action_replay')) {
+		winmine.update_game_over_menu();
 		winmine.mines = JSON.parse(url_parameters.get('board_mines'));
 		winmine.backup_y = parseInt(url_parameters.get('board_backup_mine').split('_')[0], 10);
 		winmine.backup_x = parseInt(url_parameters.get('board_backup_mine').split('_')[1], 10);
@@ -33,12 +31,48 @@ winmine.load_board_settings = function() {
 		winmine.action_replay = JSON.parse(url_parameters.get('action_replay'));
 		/* TODO: stop doing this here and do this on data save (as in, stop saving 'l' and 'm' in the same game_clicks.push() so that we just save one 'm' record in multi-trigger series as that's all that's needed). expensive uniquify: */
 		winmine.action_replay = winmine.action_replay.map(x=>x.join('|')).filter((v, i, a) => a.indexOf(v) === i).map(x=>x.split('|'));
-		/* set question mark behavior for replay based on seeing any question marks in action history. this trick would need to do more to work if a user changed the setting during the original game play */
+		/* set question mark behavior for replay based on seeing any question marks in action history. */
+		/* this does not support replay of games where the user changed the question mark setting during game play. we would need to know every time the setting was changed to do the same during replay */
 		const question_actions = winmine.action_replay.filter(x => x[1]==='q');
 		winmine.marks = (question_actions.length > 0) ? true : false;
-		winmine.replay_pause = true; /* begin "paused" */
+		document.querySelector('.menu-item[data-name="Marks (?)"]').classList.add('menu-item-disabled');
+		winmine.replay_pause = (url_parameters.has('start_paused')) ? true : false;
+		winmine.replay_mode = true;
+
+		const play_pause = document.querySelector('.replay-menu-item[data-replay-menu="play-pause-button"]');
+		play_pause.classList.add('replay-menu-item-enabled');
+		if(winmine.replay_pause) {
+			play_pause.childNodes[0].classList.add('color-red');
+		} else {
+			play_pause.childNodes[1].classList.add('color-red');
+		}
+
+		/* cursor for replay stored as css class background-image */
+		const cursor = document.createElement('div');
+		cursor.classList.add('replay-cursor');
+		document.body.prepend(cursor);
+		/* two visual window overlay items are needed so menu can still be interacted with, one for red alert border, and one for blocking pointer events on game board */
+		const game_frame = document.createElement('div');
+		game_frame.classList.add('replay-mode-game-container-overlay');
+		document.body.prepend(game_frame);
+		const window_frame = document.createElement('div');
+		window_frame.classList.add('replay-mode-html-body-overlay');
+		document.body.prepend(window_frame);
+		/* visual red alert border effect on click behavior */
+		game_frame.addEventListener('mousedown', function(event) {
+			window_frame.classList.add('replay-mode-html-body-overlay-enabled');
+			document.getElementsByClassName('menu-opener-item')[0].classList.add('color-red');
+		});
+		game_frame.addEventListener('mouseup', function(event) {
+			window_frame.classList.remove('replay-mode-html-body-overlay-enabled');
+			document.getElementsByClassName('menu-opener-item')[0].classList.remove('color-red');
+		});
+		game_frame.addEventListener('mouseleave', function(event) {
+			window_frame.classList.remove('replay-mode-html-body-overlay-enabled');
+			document.getElementsByClassName('menu-opener-item')[0].classList.remove('color-red');
+		});
+
 	}
-	winmine.replay_mode = (typeof winmine.action_replay !== 'undefined') ? true : false;
 };
 
 /* The counter and timer are 3 length elements, where each element is a literal "seven segment display" of 21x11 pixels: each pixel cell is assigned its A-G character position with css classes that can be toggled. */
@@ -283,6 +317,132 @@ winmine.random = function(min, max) {
 			value = bytes.reduce((acc, x, n) => acc + x * 256 ** n, 0);
 	} while (value >= cutoff) {
 		return min + value % range;
+	}
+};
+
+/* for applying noise to action replay cursor movements https://github.com/blindman67/SimplexNoiseJS */
+winmine.simplex_open = function(clientSeed) {
+	const SQ3 = 1.7320508075688772;
+	const toNums = (s) => s.split(",").map(s => new Uint8Array(s.split("").map(v => Number(v))));
+	const decode = (m, r, s) => new Int8Array(s.split("").map(v => parseInt(v, r) + m));
+	const NORM_2D = 1.0 / 47.0;
+	const SQUISH_2D = (SQ3 - 1) / 2;
+	const STRETCH_2D = (1 / SQ3 - 1) / 2;
+	let base2D = toNums("110101000,110101211");
+	const gradients2D = decode(-5, 11, "a77a073aa3700330");
+	let lookupPairs2D = () => new Uint8Array([0,1, 1,0, 4,1, 17,0, 20,2, 21,2, 22,5, 23, 5,26, 4,39, 3,42, 4,43, 3]);
+	let p2D = decode(-1, 4, "112011021322233123132111");
+	const setOf = (count, cb = (i)=>i) => { let a = [], i = 0; while (i < count) { a.push(cb(i ++)) } return a };
+	const doFor = (count, cb) => { let i = 0; while (i < count && cb(i++) !== true); };
+	function shuffleSeed(seed, count = 1){
+		seed = seed * 1664525 + 1013904223 | 0;
+		count -= 1;
+		return count > 0 ? shuffleSeed(seed, count) : seed;
+	}
+	const types = {
+		_2D : {
+			base : base2D,
+			squish : SQUISH_2D,
+			dimensions : 2,
+			pD : p2D,
+			lookup : lookupPairs2D,
+		},
+	};
+	function createContribution(type, baseSet, index) {
+		let i = 0;
+		const multiplier = baseSet[index ++];
+		const c = { next : undefined };
+		while(i < type.dimensions){
+			const axis = ("xyzw")[i];
+			c[axis + "sb"] = baseSet[index + i];
+			c["d" + axis] = - baseSet[index + i++] - multiplier * type.squish;
+		}
+		return c;
+	};
+	function createLookupPairs(lookupArray, contributions){
+		const a = lookupArray();
+		const res = new Map();
+		for (let i = 0; i < a.length; i += 2) { res.set(a[i], contributions[a[i + 1]]) }
+		return res;
+	};
+	function createContributionArray(type) {
+		const conts = [];
+		const d = type.dimensions;
+		const baseStep = d * d;
+		let k, i = 0;
+		while (i < type.pD.length) {
+			const baseSet = type.base[type.pD[i]];
+			let previous, current;
+			k = 0;
+			do {
+				current = createContribution(type, baseSet, k);
+				if (!previous) { conts[i / baseStep] = current }
+				else { previous.next = current }
+				previous = current;
+				k += d + 1;
+			} while(k < baseSet.length);
+
+			current.next = createContribution(type, type.pD, i + 1);
+			if (d >= 3) { current.next.next = createContribution(type, type.pD, i + d + 2) }
+			if (d === 4) { current.next.next.next = createContribution(type, type.pD, i + 11) }
+			i += baseStep;
+		}
+		const result = [conts, createLookupPairs(type.lookup, conts)];
+		type.base = undefined;
+		type.lookup = undefined;
+		return result;
+	};
+	const [contributions2D, lookup2D] = createContributionArray(types._2D);
+	const perm = new Uint8Array(256);
+	const perm2D = new Uint8Array(256);
+	const source = new Uint8Array(setOf(256, i => i));
+	let seed = shuffleSeed(clientSeed, 3);
+	doFor(256, i => {
+		i = 255 - i;
+		seed = shuffleSeed(seed);
+		let r = (seed + 31) % (i + 1);
+		r += r < 0 ? i + 1 : 0;
+		perm[i] = source[r];
+		perm2D[i] = perm[i] & 0x0E;
+		source[r] = source[i];
+	});
+	base2D = undefined;
+	lookupPairs2D = undefined;
+	p2D = undefined;
+	return {
+		noise2D(x, y) {
+			const pD = perm2D;
+			const p = perm;
+			const g = gradients2D;
+			const stretchOffset = (x + y) * STRETCH_2D;
+			const xs = x + stretchOffset, ys = y + stretchOffset;
+			const xsb = Math.floor(xs), ysb = Math.floor(ys);
+			const squishOffset	= (xsb + ysb) * SQUISH_2D;
+			const dx0 = x - (xsb + squishOffset), dy0 = y - (ysb + squishOffset);
+			let c = (() => {
+				const xins = xs - xsb, yins = ys - ysb;
+				const inSum = xins + yins;
+				return lookup2D.get(
+					(xins - yins + 1) |
+					(inSum << 1) |
+					((inSum + yins) << 2) |
+					((inSum + xins) << 4)
+				);
+			})();
+			let i, value = 0;
+			while (c !== undefined) {
+				const dx = dx0 + c.dx;
+				const dy = dy0 + c.dy;
+				let attn = 2 - dx * dx - dy * dy;
+				if (attn > 0) {
+					i = pD[(p[(xsb + c.xsb) & 0xFF] + (ysb + c.ysb)) & 0xFF];
+					attn *= attn;
+					value += attn * attn * (g[i++] * dx + g[i] * dy);
+				}
+				c = c.next;
+			}
+			return value * NORM_2D;
+		},
 	}
 };
 
@@ -907,37 +1067,124 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 	}
 };
 
+winmine.get_line = function(y0, x0, y1, x1) {
+	const points = [];
+	const dx = Math.abs(x1 - x0);
+	const dy = Math.abs(y1 - y0);
+	const sx = (x0 < x1) ? 1 : -1;
+	const sy = (y0 < y1) ? 1 : -1;
+	let err = dx - dy;
+	while(true) {
+		points.push([x0, y0]);
+		 if ((x0 === x1) && (y0 === y1)) break;
+		 const e2 = 2*err;
+		 if (e2 > -dy) { err -= dy; x0  += sx; }
+		 if (e2 < dx) { err += dx; y0  += sy; }
+	}
+	return(points);
+}
+winmine.animate_cursor = function(cursor, start_sec, end_sec, start_y, start_x, end_y, end_x) {
+	/*
+	Two factors affect cursor movemment currently. The combination of the two can create a natural-ish cursor simulation if you play around. You can also create very jittery unnatural movements.
+	The challenge is there is probably a rate that needs to be applied so that movements appear more consistent even if they take much longer or shorter.
+	That or some other technique like holding slower movements back until enough time has passed that they would appear more quick/normal.
+	1. the noise formula being applied to coordinates. currently we make it return a positive number between 0 and 1, and then multiply by N pixels
+	2. the reducing of pixels we care to animate. currently keeping every 8th pint seems good enough, but experimenting could get more realistic results. */
+	const coordinates = winmine.get_line(start_y, start_x, end_y, end_x);
+	let noise_coordinates = coordinates.map(function(coords, index) {
+		return([
+			/* 1 */
+			coords[0] + (((winmine.simplex.noise2D(0, index*1) + 1) / 2) * 4),
+			coords[1] + (((winmine.simplex.noise2D(1, index*1) + 1) / 2) * 4)
+		])
+	});
+	noise_coordinates = noise_coordinates.filter((element, index) => {
+		/* 2 */
+		return index % 8 === 0;
+	})
+	const delay_ms = (end_sec*1000) - (start_sec*1000);
+	const loop_length = noise_coordinates.length-1;
+	const loop_interval_ms = Math.floor(delay_ms / loop_length);
+	let loop_rolling_ms = 0;
+	let loop_counter = 0;
+	while (loop_counter < loop_length) {
+		setTimeout(function(_loop_counter) {
+			cursor.animate(
+				[{ transform: 'translateY(' + noise_coordinates[_loop_counter][1] + 'px)' + ' translateX(' + noise_coordinates[_loop_counter][0] + 'px)' },
+				 { transform: 'translateY(' + noise_coordinates[_loop_counter+1][1] + 'px)' + ' translateX(' + noise_coordinates[_loop_counter+1][0] + 'px)' }],
+				{
+					duration: loop_interval_ms,
+					easing: 'linear',
+					fill: 'forwards',
+				},
+			);
+		}, loop_rolling_ms, loop_counter);
+		loop_rolling_ms = loop_rolling_ms + loop_interval_ms;
+		loop_counter++;
+	}
+}
+
 winmine.replay_game = function() {
 	winmine.replay_action_idx = winmine.replay_action_idx || 0; /* ongoing counter for pause/play, set on setTimeout success */
 	winmine.replay_setTimeout = []; /* push setTimeout calls here so we can clear them when pause is selected by user */
 	let replay_action_duration = 0; /* get sum of time passed from every action up until the one last paused on */
+	winmine.simplex = winmine.simplex_open(Date.now()); /* cursor noise */
 	for (let i = 0; i < winmine.replay_action_idx; i++) {
 		replay_action_duration = replay_action_duration + (parseFloat(winmine.action_replay[i+1][0], 10) - parseFloat(winmine.action_replay[i][0], 10));
 	}
-	console.log(winmine.replay_action_idx);
-	console.log(replay_action_duration);
-		/* for (const action of winmine.action_replay.slice(winmine.replay_action_idx)) { */
-			for (let i = winmine.replay_action_idx; i < winmine.action_replay.length; i++) {
-			const action = winmine.action_replay[i];
-			const action_delay = (action[0]*1000) - (replay_action_duration*1000);
-			const timeout_id = setTimeout(function() {
-				if(action[1] == 'l') {
-					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button0': true } }));
-					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button0': true } }));
-				} else if(action[1] == 'm') {
-					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button0': true, 'button2': true } }));
-					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button0': true, 'button2': true } }));
-				} else if(['f','q','c'].includes(action[1])) {
-					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button2': true } }));
-					document.getElementById('cell_' + action[2]).dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button2': true } }));
-				}
-				winmine.replay_action_idx = winmine.replay_action_idx + 1;
-			}, action_delay);
-			winmine.replay_setTimeout.push(timeout_id);
-		}
-	};
+	const action_count = winmine.action_replay.length;
+	const cursor = document.getElementsByClassName('replay-cursor')[0];
+	cursor.style.display = 'block';
+	let curr_y = undefined;
+	let curr_x = undefined;
+	let next_y = undefined;
+	let next_x = undefined;
+	for (let i = winmine.replay_action_idx; i < action_count; i++) {
+		const action = winmine.action_replay[i];
+		const action_delay = (action[0]*1000) - (replay_action_duration*1000);
+		const next_action = (i < action_count-1) ? winmine.action_replay[i+1] : action;
+		const curr_cell = document.getElementById('cell_' + action[2]);
+		const next_cell = document.getElementById('cell_' + next_action[2]);
+		curr_y = (typeof(next_y)==='undefined') ? curr_cell.offsetTop + 0 : next_y;
+		curr_x = (typeof(next_x)==='undefined') ? curr_cell.offsetLeft + 0 : next_x;
+		next_y = next_cell.offsetTop + 0;
+		next_x = next_cell.offsetLeft + 0;
+		const timeout_id = setTimeout(function(_curr_y, _curr_x, _next_y, _next_x) {
+			if(action[1] == 'l') {
+				curr_cell.dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button0': true } }));
+				curr_cell.dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button0': true } }));
+			} else if(action[1] == 'm') {
+				curr_cell.dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button0': true, 'button2': true } }));
+				curr_cell.dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button0': true, 'button2': true } }));
+			} else if(['f','q','c'].includes(action[1])) {
+				curr_cell.dispatchEvent(new CustomEvent('mousedown', { 'bubbles': true , 'detail': { 'button2': true } }));
+				curr_cell.dispatchEvent(new CustomEvent('mouseup', { 'bubbles': true , 'detail': { 'button2': true } }));
+			}
+			winmine.replay_action_idx = winmine.replay_action_idx + 1;
+			if(i < action_count) {
+				winmine.animate_cursor(cursor, action[0], next_action[0], _curr_y, _curr_x, _next_y, _next_x);
+			}
+		}, action_delay, curr_y, curr_x, next_y, next_x);
+		winmine.replay_setTimeout.push(timeout_id);
+	}
+};
+
+winmine.update_game_over_menu = function() {
+	document.getElementsByClassName('is-prev-game-menu-frame')[0].classList.remove('is-prev-game-menu-frame-enabled');
+	document.getElementsByClassName('replay-menu-frame')[0].classList.add('replay-menu-frame-enabled');
+	const is_small_board = (winmine.width < 10) ? true : false;
+	if(is_small_board) {
+		document.getElementsByClassName('menu-opener-frame')[0].classList.add('menu-opener-frame-enabled');
+		document.getElementsByClassName('replay-menu-frame')[0].classList.remove('replay-menu-frame-enabled');
+	}
+};
 
 winmine.select_menu_item = function(event) {
+
+	if(event.target.classList.contains('menu-item-disabled')) {
+		return;
+	}
+
 	/* in case menu content is already open, remove them through their -enabled class name */
 	for (let value of document.getElementsByClassName('feature-content')) {
 		const div_children = value.children;
@@ -1323,6 +1570,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			event.preventDefault(); /* prevent browser from displaying the 'not allowable' cursor and trying to html draggable-item things */
 		}
 		if(event.button === 2 && !winmine.multi_cell) { return; }
+		if(winmine.replay_mode) { return; }
 		if(winmine.game_over === false && !event.target.classList.contains('smiley-container')) {
 			smiley_frame.classList.remove('face-neutral');
 			smiley_frame.classList.add('face-cursor-down');
@@ -1520,23 +1768,27 @@ document.addEventListener('DOMContentLoaded', function() {
 		toggle_item.classList.add('display-block');
 	});
 
-document.getElementsByClassName('replay-menu-container')[0].addEventListener('mouseup', function(event) {
-	const action_name = event.target.getAttribute('data-replay-menu');
-	if(action_name === 'play-pause-button') {
-		if(document.getElementsByClassName('replay-mode-html-body-overlay').length === 0) {
-			const window_frame = document.createElement('div');
-			window_frame.classList.add('replay-mode-html-body-overlay');
-			document.body.prepend(window_frame);
+	document.querySelector('.replay-menu-item[data-replay-menu="play-pause-button"]').addEventListener('dblclick', function (event) {
+		window.location = window.location.href + '&start_paused=yes';
+	});
+	document.getElementsByClassName('replay-menu-container')[0].addEventListener('mouseup', function(event) {
+		const action_name = event.target.getAttribute('data-replay-menu') || event.target.parentNode.getAttribute('data-replay-menu');
+		if(action_name === 'play-pause-button') {
+			const play_pause = document.querySelector('.replay-menu-item[data-replay-menu="play-pause-button"]');
+			if(winmine.replay_pause) {
+				winmine.replay_game();
+				play_pause.childNodes[0].classList.remove('color-red');
+				play_pause.childNodes[1].classList.add('color-red');
+			} else {
+				if(typeof(winmine.replay_setTimeout) !== 'undefined') {
+					winmine.replay_setTimeout.forEach(function(item) { clearTimeout(item); });
+				}
+				play_pause.childNodes[0].classList.add('color-red');
+				play_pause.childNodes[1].classList.remove('color-red');
+			}
+			winmine.replay_pause = (winmine.replay_pause) ? false : true;
 		}
-		winmine.replay_pause = (winmine.replay_pause) ? false : true;
-		if(winmine.replay_pause) {
-			winmine.replay_setTimeout.forEach(function(item) { clearTimeout(item); });
-			
-		} else {
-			winmine.replay_game();
-		}
-	}
-});
+	});
 
 	document.getElementsByClassName('content-game-history-context')[0].addEventListener('mouseup', function(event) {
 		if(event.target.hasAttribute('data-action-url')) {
@@ -1569,7 +1821,7 @@ document.getElementsByClassName('replay-menu-container')[0].addEventListener('mo
 
 	/* end document load events: */
 	/* trigger game rewatch replay if in replay mode */
-	if(winmine.replay_mode) {
+	if(winmine.replay_mode & !winmine.replay_pause) {
 		document.querySelector('[data-replay-menu="play-pause-button"]').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
 	}
 

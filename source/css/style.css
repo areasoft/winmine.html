@@ -10,6 +10,8 @@ html, body {
 /* File menu stuff */
 .file-menu-frame {
 	border-bottom: 1px solid rgba(240,240,240);
+	z-index: 200;
+	position: sticky; /* needed for z-index, which is needed so .file-menu-frame children can be interacted with even if the game container element is disabled */
 }
 .file-menu {
 	height: 18px;
@@ -93,7 +95,7 @@ html, body {
 	background-color: #cccccc;
 	margin: 0px 3px 0px 3px;
 }
-.not-available {
+.menu-item-disabled {
 	color: #666666;
 }
 .menu-mark {
@@ -103,7 +105,8 @@ html, body {
 }
 
 .replay-menu-frame,
-.game-finished-menu-frame {
+.is-prev-game-menu-frame,
+.menu-opener-frame {
 	position: fixed;
 	right: 0px;
 	display: none;
@@ -111,19 +114,17 @@ html, body {
 	height:16px;
 }
 .replay-menu-frame-enabled,
-.game-finished-menu-frame-enabled {
+.is-prev-game-menu-frame-enabled,
+.menu-opener-frame-enabled {
   display: inline-block;
 }
 .replay-menu-container,
-.game-finished-menu-container {
+.is-prev-game-menu-container {
 
-/*   display: inline-grid;
-  grid-auto-flow: column;
-  align-items: center;
-  justify-content: center; */
 }
 .replay-menu-item,
-.game-finished-menu-item {
+.is-prev-game-menu-item,
+.menu-opener-item {
 	display: inline-block;
 	font-family: 'Segoe UI';
 	font-size: 9pt;
@@ -134,27 +135,59 @@ html, body {
 }
 .replay-menu-item {
 	font-family: 'Arial';
+	vertical-align: top;
+	min-height: 16px;
 }
 .replay-menu-item:hover,
-.game-finished-menu-item:hover {
+.is-prev-game-menu-item:hover {
 	background-color: rgba(209, 226, 242);
 }
 .replay-menu-item-enabled {
 	background-color: rgba(209, 226, 242);
 }
-.replay-menu-item[data-replay-menu="stats-button"],
-.game-finished-menu-item[data-game-finished-menu="stats-button"] {
+.replay-menu-item[data-replay-menu="stats-button"] {
 	padding-right: 4px;
 	padding-left: 2px;
 }
+.replay-menu-item[data-replay-menu="play-pause-button"] {
+	padding-left: 4px;
+}
+.replay-menu-item[data-replay-menu="play-pause-button"] span:first-child {
+	font-weight: bold;
+}
 
+.color-red {
+	color: rgba(255, 0, 0, .8);
+}
 .replay-mode-html-body-overlay {
+	display: none;
 	position: absolute;
 	width: calc(100vw - 4px);
 	height: calc(100vh - 4px);
-	border: 2px solid rgba(255, 0, 0, 0.5);
-	z-index: 1000;
-	pointer-events: none
+	border: 2px solid rgba(255, 0, 0, 0.60);
+	z-index: 300;
+	pointer-events: none;
+}
+.replay-mode-html-body-overlay-enabled {
+	display: block;
+}
+.replay-mode-game-container-overlay {
+	position: absolute;
+	width: 100vw;
+	height: calc(100vh - 20px);
+	top: 20px;
+	z-index: 100;
+}
+
+.menu-opener-item {
+	font-family: 'Arial';
+	padding-right: 6px;
+	padding-top: 1px;
+}
+.menu-opener-frame:hover + div, .replay-menu-frame:hover {
+	display: inline-block;
+	background-color: rgba(245,246,247);
+	position: absolute;
 }
 /* Frame and border stuff */
 .game-window-frame {
@@ -278,7 +311,15 @@ html, body {
 .c8 {
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' preserveAspectRatio='xMidYMid meet' width='10' height='10'%3E%3Cstyle%3E%3C!%5BCDATA%5B.B%7Bfill:gray%7D.C%7Bfill-opacity:0%7D%5D%5D%3E%3C/style%3E%3Cdefs%3E%3Cpath d='M1 0h8v2H1V0z' id='A'/%3E%3Cpath d='M1 4h8v2H1V4z' id='B'/%3E%3Cpath d='M1 8h8v2H1V8z' id='C'/%3E%3Cpath d='M7 6h3v3H7V6z' id='D'/%3E%3Cpath d='M7 1h3v3H7V1z' id='E'/%3E%3Cpath d='M0 1h3v3H0V1z' id='F'/%3E%3Cpath d='M0 6h3v3H0V6z' id='G'/%3E%3Cpath d='M1 2.82h2v4H1v-4z' id='H'/%3E%3Cpath d='M7 2.82h2v4H7v-4z' id='I'/%3E%3C/defs%3E%3Cuse xlink:href='%23A' class='B'/%3E%3Cuse xlink:href='%23A' class='C'/%3E%3Cuse xlink:href='%23B' class='B'/%3E%3Cuse xlink:href='%23B' class='C'/%3E%3Cuse xlink:href='%23C' class='B'/%3E%3Cuse xlink:href='%23C' class='C'/%3E%3Cuse xlink:href='%23D' class='B'/%3E%3Cuse xlink:href='%23D' class='C'/%3E%3Cuse xlink:href='%23E' class='B'/%3E%3Cuse xlink:href='%23E' class='C'/%3E%3Cuse xlink:href='%23F' class='B'/%3E%3Cuse xlink:href='%23F' class='C'/%3E%3Cuse xlink:href='%23G' class='B'/%3E%3Cuse xlink:href='%23G' class='C'/%3E%3Cuse xlink:href='%23H' class='B'/%3E%3Cuse xlink:href='%23H' class='C'/%3E%3Cuse xlink:href='%23I' class='B'/%3E%3Cuse xlink:href='%23I' class='C'/%3E%3C/svg%3E")
 }
-	
+.replay-cursor {
+	position: absolute;
+	pointer-events: none;
+	height: 25px;
+	width: 25px;
+	display: none;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50' width='100%' height='100%'%3E%3Cpath fill='%23ffffff' stroke='%23000000' shape-rendering='geometricPrecision' stroke-linecap='round' stroke-linejoin='round' stroke-width='2px' d='M15,6l24,22.4l-11.6,1l6.7,14.6L29.7,46l-6.4-14.8L15,39L15,6'/%3E%3C/svg%3E");
+}
+
 
 .smiley-frame {
 	border: 1px solid rgba(128,128,128);
