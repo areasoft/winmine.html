@@ -23,7 +23,7 @@
 					<div class="menu-item-separator"></div>
 					<div class="menu-item" data-name="Marks (?)">Marks (?)</div>
 					<div class="menu-item" data-name="Color">Color</div>
-					<div class="menu-item not-available" data-name="Sound">Sound</div>
+					<div class="menu-item menu-item-disabled" data-name="Sound">Sound</div>
 					<div class="menu-item-separator"></div>
 					<div class="menu-item" data-name="Best Times...">Best Times...</div>
 					<div class="menu-item-separator"></div>
@@ -48,20 +48,19 @@
 					<div class="menu-item" data-name="Settings">Settings</div>
 				</div>
 			</div>
+			<div class="menu-opener-frame">
+				<div class="menu-opener-item">≡</div>
+			</div>
 			<div class="replay-menu-frame">
 				<div class="replay-menu-container">
-					<div class="replay-menu-item" data-replay-menu="rewind-button" title="Start from beginning">◄</div>
-					<div class="replay-menu-item" data-replay-menu="play-pause-button" title="Play">ǁ►</div>
-					<div class="replay-menu-item" data-replay-menu="replay-button" title="Replay board">🖱️<!-- ⟳ --></div>
+					<div class="replay-menu-item" data-replay-menu="play-pause-button" title="Play"><span>ǁ</span><span>►</span></div>
+					<div class="replay-menu-item" data-replay-menu="replay-button" title="Replay board">🖱️</div>
 					<div class="replay-menu-item" data-replay-menu="stats-button" title="View stats">%</div>
 				</div>
 			</div>
-			<div class="game-finished-menu-frame">
-			<!-- <div class="game-finished-menu-frame game-finished-menu-frame-enabled"> -->
-				<div class="game-finished-menu-container">					
-					<div class="game-finished-menu-item" data-game-finished-menu="watch-back-button" title="Watch game back">🎥</div>
-					<div class="game-finished-menu-item" data-game-finished-menu="replay-button" title="Replay board">🖱️</div>
-					<div class="game-finished-menu-item" data-game-finished-menu="stats-button" title="View stats">%</div>
+			<div class="is-prev-game-menu-frame">
+				<div class="is-prev-game-menu-container">
+					<div class="is-prev-game-menu-item" data-is-prev-game-menu="play-again-button" title="Try again">⟳</div>
 				</div>
 			</div>
 			<div class="feature-content-frame">
