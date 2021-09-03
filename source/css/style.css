@@ -104,6 +104,7 @@ html, body {
 	background-position: 6px 50%;
 }
 
+.extra-replay-menu-frame,
 .replay-menu-frame,
 .is-prev-game-menu-frame,
 .menu-opener-frame {
@@ -111,7 +112,8 @@ html, body {
 	right: 0px;
 	display: none;
 	font-size: 0;
-	height:16px;
+	height: 16px;
+	white-space: nowrap;
 }
 .replay-menu-frame-enabled,
 .is-prev-game-menu-frame-enabled,
@@ -799,7 +801,7 @@ li {
 	display: block;
 }
 .content-settings-header {
-	padding-bottom: 6px;
+	padding-bottom: 2px;
 	font-size: 14px;
 	font-weight: bold;
 }
@@ -808,6 +810,10 @@ li {
 	font-size: 12px;
 	font-weight: bold;
 }
+.content-settings-item-body {
+	padding-left: 2px;
+	padding-top: 2px;
+}
 .content-settings-item-body label {
 	display: inline-block;
 	vertical-align: middle;
@@ -815,9 +821,19 @@ li {
 	margin-bottom: 4px;
 }
 .content-settings-item-separator {
-	margin-top: 6px;
+	margin-top: 14px;
 	height: 1px;
 	background-color: #cccccc;
+}
+.content-settings-cell-size-input {
+	width: 40px;
+}
+.content-settings-cell-size > div {
+	display: inline-block;
+}
+.content-settings-default-name-input {
+	width: 90%;
+	max-width: 200px;
 }
 
 /* global things */

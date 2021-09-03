@@ -5,6 +5,7 @@ var winmine = {};
 
 winmine.load_board_settings = function() {
 	const url_parameters = new URLSearchParams(window.location.search);
+	/* url components needed to set minimum variables needed for gameplay */
 	if(url_parameters.has('height') && url_parameters.has('width') && url_parameters.has('mines')) {
 		winmine.height = parseInt(url_parameters.get('height'));
 		winmine.width = parseInt(url_parameters.get('width'));
@@ -18,10 +19,15 @@ winmine.load_board_settings = function() {
 		winmine.width = 8;
 		winmine.mine_count = 10;
 	}
+	/* url components needed to replay a previous board. this should show a refresh icon always on by default in the top right menu to indicate it is a replay. clicking the replay icon will refresh the page too. once game is played and ends, show the usual menu showed when game ends */
 	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine')) {
-		/* replay a previous board. this should show a refresh icon always on by default in the top right menu to indicate it is a replay. clicking the replay icon will refresh the page too. once game is played and ends, show the usual menu showed when game ends */
 		document.getElementsByClassName('is-prev-game-menu-frame')[0].classList.add('is-prev-game-menu-frame-enabled');
+		winmine.mines = JSON.parse(url_parameters.get('board_mines'));
+		winmine.backup_y = parseInt(url_parameters.get('board_backup_mine').split('_')[0], 10);
+		winmine.backup_x = parseInt(url_parameters.get('board_backup_mine').split('_')[1], 10);
+		winmine.play_again_mode = true;
 	}
+	/* url components needed to configure a video-style playback */
 	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine') && url_parameters.has('time') && url_parameters.has('action_replay')) {
 		winmine.update_game_over_menu();
 		winmine.mines = JSON.parse(url_parameters.get('board_mines'));
@@ -29,27 +35,20 @@ winmine.load_board_settings = function() {
 		winmine.backup_x = parseInt(url_parameters.get('board_backup_mine').split('_')[1], 10);
 		winmine.game_duration = url_parameters.get('time');
 		winmine.action_replay = JSON.parse(url_parameters.get('action_replay'));
-		/* TODO: stop doing this here and do this on data save (as in, stop saving 'l' and 'm' in the same game_clicks.push() so that we just save one 'm' record in multi-trigger series as that's all that's needed). expensive uniquify: */
+		/* TODO: remove this expensive distinct/uniquify filter that was needed for old game saves where code pushed an extra/redundant 'l' to game_clicks (we just needed an 'm' record) */
 		winmine.action_replay = winmine.action_replay.map(x=>x.join('|')).filter((v, i, a) => a.indexOf(v) === i).map(x=>x.split('|'));
 		/* set question mark behavior for replay based on seeing any question marks in action history. */
 		/* this does not support replay of games where the user changed the question mark setting during game play. we would need to know every time the setting was changed to do the same during replay */
 		const question_actions = winmine.action_replay.filter(x => x[1]==='q');
 		winmine.marks = (question_actions.length > 0) ? true : false;
 		document.querySelector('.menu-item[data-name="Marks (?)"]').classList.add('menu-item-disabled');
-		winmine.replay_pause = (url_parameters.has('start_paused')) ? true : false;
 		winmine.replay_mode = true;
-
+		winmine.replay_pause = true; /* default paused */
+		winmine.replay_autoplay = (url_parameters.has('autoplay')) ? (url_parameters.get('autoplay').toString() === 'true') : false;
 		const play_pause = document.querySelector('.replay-menu-item[data-replay-menu="play-pause-button"]');
 		play_pause.classList.add('replay-menu-item-enabled');
-		if(winmine.replay_pause) {
-			play_pause.childNodes[0].classList.add('color-red');
-		} else {
-			play_pause.childNodes[1].classList.add('color-red');
-		}
-
-		/* cursor for replay stored as css class background-image */
 		const cursor = document.createElement('div');
-		cursor.classList.add('replay-cursor');
+		cursor.classList.add('replay-cursor'); /* cursor for replay stored as css class background-image */
 		document.body.prepend(cursor);
 		/* two visual window overlay items are needed so menu can still be interacted with, one for red alert border, and one for blocking pointer events on game board */
 		const game_frame = document.createElement('div');
@@ -59,15 +58,15 @@ winmine.load_board_settings = function() {
 		window_frame.classList.add('replay-mode-html-body-overlay');
 		document.body.prepend(window_frame);
 		/* visual red alert border effect on click behavior */
-		game_frame.addEventListener('mousedown', function(event) {
+		game_frame.addEventListener('mousedown', function() {
 			window_frame.classList.add('replay-mode-html-body-overlay-enabled');
 			document.getElementsByClassName('menu-opener-item')[0].classList.add('color-red');
 		});
-		game_frame.addEventListener('mouseup', function(event) {
+		game_frame.addEventListener('mouseup', function() {
 			window_frame.classList.remove('replay-mode-html-body-overlay-enabled');
 			document.getElementsByClassName('menu-opener-item')[0].classList.remove('color-red');
 		});
-		game_frame.addEventListener('mouseleave', function(event) {
+		game_frame.addEventListener('mouseleave', function() {
 			window_frame.classList.remove('replay-mode-html-body-overlay-enabled');
 			document.getElementsByClassName('menu-opener-item')[0].classList.remove('color-red');
 		});
@@ -178,21 +177,46 @@ winmine.set_mine_counter = function(remaining_mines) {
 	winmine.counter = remaining_mines;
 };
 
-winmine.start_timer = async function() {
+winmine.start_timer = function() {
 	this.sleep = function(ms) {
 		return new Promise(resolve => setTimeout(resolve, ms));
 	};
-	postMessage('1'); /* winmine version starts at 1 */
-	while(true) {
-		await sleep(1000);
-		let since_start = performance.now();
-		since_start = since_start + 1000;
-		since_start = Math.round(since_start/1000);
-		postMessage(since_start.toString());
-	}
+	this.onmessage = async function(e) {
+		let start_seconds = e.data;
+		let delay_ms = parseInt(start_seconds) * 1000;
+		/* look for a period because this worker function accepts fractional seconds (e.g. 4.205 from action replay).
+		do this by showing the current integer second and sleeping the remaining partial-second difference, then showing the next integer */
+		if(start_seconds.match(/\./g)) {
+			const second_fraction = start_seconds.split('.');
+			postMessage(second_fraction[0]);
+			start_seconds = parseInt(second_fraction[0]) + 1 + '';
+			const second_sub_ms = second_fraction[1];
+			await sleep(1000 - parseInt(second_sub_ms, 10));
+			delay_ms = parseInt(second_fraction[0] + second_fraction[1]);
+		}
+		/* first we show the asked-for seconds, then we kick off a while loop that sleeps for delay_ms each loop (e.g. 1000ms).
+		the original asked-for seconds has to be added each time in the while loop because the loop uses performance.now() for precision
+		which is absolute to the spawn of the worker (so we add what we asked for, e.g. 1 second or 460 seconds, relative to this, every time) */
+		postMessage(start_seconds);
+		while(true) {
+			await sleep(1000);
+			let since_start = performance.now(); /* time since worker started */
+			since_start = since_start + delay_ms;
+			since_start = Math.round(since_start/1000);
+			postMessage(since_start.toString());
+		}
+	};
 };
 winmine.start_timer_function_text = '(' + winmine.start_timer.toString() + ')()';
 winmine.start_timer_function_blob = new Blob([winmine.start_timer_function_text], {type: 'application/javascript'});
+
+winmine.start_timer_worker = function(start_value) {
+	winmine.timer_worker = new Worker(URL.createObjectURL(winmine.start_timer_function_blob));
+	winmine.timer_worker.onmessage = function(event) {
+		winmine.set_timer(event.data);
+	}
+	winmine.timer_worker.postMessage(start_value);
+};
 
 winmine.timer = '000';
 winmine.set_timer = function(new_timer) {
@@ -304,7 +328,7 @@ winmine.get_array_of_neighbor_ids = function(y, x) {
 	return(neighbor_ids);
 };
 
-/* for assigning mines */
+/* for assigning mines. attribution: https://stackoverflow.com/a/65440696/2100671 */
 winmine.random = function(min, max) {
 	const range = max - min + 1;
 	const bits_needed = Math.ceil(Math.log2(range));
@@ -320,7 +344,7 @@ winmine.random = function(min, max) {
 	}
 };
 
-/* for applying noise to action replay cursor movements https://github.com/blindman67/SimplexNoiseJS */
+/* for applying noise to action replay cursor movements. attribution: https://github.com/blindman67/SimplexNoiseJS */
 winmine.simplex_open = function(clientSeed) {
 	const SQ3 = 1.7320508075688772;
 	const toNums = (s) => s.split(",").map(s => new Uint8Array(s.split("").map(v => Number(v))));
@@ -383,8 +407,6 @@ winmine.simplex_open = function(clientSeed) {
 			} while(k < baseSet.length);
 
 			current.next = createContribution(type, type.pD, i + 1);
-			if (d >= 3) { current.next.next = createContribution(type, type.pD, i + d + 2) }
-			if (d === 4) { current.next.next.next = createContribution(type, type.pD, i + 11) }
 			i += baseStep;
 		}
 		const result = [conts, createLookupPairs(type.lookup, conts)];
@@ -585,15 +607,15 @@ winmine.create_mine_field = function() {
 	cell_container.style.setProperty('grid-template-columns', grid_template_columns);
 
 	/* create mine array if not already created for action replay */
-	winmine.mines = (winmine.replay_mode) ? winmine.mines : []; /* replay behavior was thrown in here late and could be better organized (right now setting winmine.cells in the same for loop as filling winmine.mines even though winmine.mines may already be set in replay mode) */
+	winmine.mines = (winmine.replay_mode | winmine.play_again_mode) ? winmine.mines : []; /* replay behavior was thrown in here late and could be better organized (right now setting winmine.cells in the same for loop as filling winmine.mines even though winmine.mines may already be set in replay mode) */
 	winmine.y_ceil = winmine.height - 1;
 	winmine.x_ceil = winmine.width - 1;
 	for(let mine = 0; winmine.mines.length < (winmine.mine_count+1); mine += 1) { /* +1 for the backup mine */
 		let y = winmine.random(0,(winmine.height-1));
 		let x = winmine.random(0,(winmine.width-1));
-		y = (winmine.replay_mode) ? parseInt(winmine.mines[mine].split('_')[0]) : y;
-		x = (winmine.replay_mode) ? parseInt(winmine.mines[mine].split('_')[1]) : x;
-		if(!winmine.replay_mode) {
+		y = (winmine.replay_mode | winmine.play_again_mode) ? parseInt(winmine.mines[mine].split('_')[0]) : y;
+		x = (winmine.replay_mode | winmine.play_again_mode) ? parseInt(winmine.mines[mine].split('_')[1]) : x;
+		if(!winmine.replay_mode & !winmine.play_again_mode) {
 			if(winmine.mines.includes(y+'_'+x)) {
 				continue;
 			} else {
@@ -627,7 +649,7 @@ winmine.create_mine_field = function() {
 			if(y!=winmine.y_ceil && x!=winmine.x_ceil && winmine.cells[y+1][x+1]!=9) {
 				winmine.cells[y+1][x+1]++; }
 		}
-		if(winmine.replay_mode & (mine >= (winmine.mine_count-1))) {
+		if((winmine.replay_mode | winmine.play_again_mode) & (mine >= (winmine.mine_count-1))) {
 			break;
 		}
 	}
@@ -637,10 +659,7 @@ winmine.create_mine_field = function() {
 winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 	if(performance.getEntriesByName('game_start').length === 0) {
 		performance.mark('game_start');
-		winmine.timer_worker = new Worker(URL.createObjectURL(winmine.start_timer_function_blob));
-		winmine.timer_worker.onmessage = function(event) {
-			winmine.set_timer(event.data);
-		}
+		winmine.start_timer_worker('1'); /* winmine version starts at 1 */
 	}
 	const cell_element = document.getElementById(cell_html_id);
 	if(cell_element.classList.contains('clear')) {
@@ -682,6 +701,7 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 				elem.classList.add('notmine');
 			}
 			document.getElementsByClassName('scoreboard-digits-container')[1].title = winmine.game_duration;
+			winmine.update_game_over_menu();
 			return;
 		} else {
 			/* replace mine in 1d array */
@@ -696,7 +716,7 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 		}
 	}
 
-	/* 2. this function sets the appropriate css classes and uses the same recursion method used to get 3BV  */
+	/* 2. use the same recursion method used to get 3BV and set the 1-9 image css classes */
 	winmine.clear_mine_field(y, x);
 
 	/*  3. consider win */
@@ -719,6 +739,7 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 		if(!winmine.replay_mode) {
 			winmine.save_record();
 		}
+		winmine.update_game_over_menu();
 	}
 };
 
@@ -807,6 +828,7 @@ winmine.set_file_menu_item_marks = function() {
 	if(winmine.extra_menu) {
 		document.querySelector('.menu-item[data-name=\'Extra Menu*\']').classList.add('menu-mark');
 		document.getElementsByClassName('extra-menu-frame')[0].classList.add('display-inline-block');
+		document.getElementsByClassName('extra-replay-menu-frame')[0].classList.add('display-inline-block');
 	}
 };
 
@@ -832,6 +854,7 @@ winmine.get_most_common_item_in_array = function(array_of_items) {
 	return(max_item);
 };
 
+/* for game history table sorting. attribution: https://stackoverflow.com/a/42080550/2100671 */
 winmine.sort_table = function(tbody, index) {
 	winmine.sort_table_col_idx = index;
 	if(winmine.sort_table_asc) {
@@ -849,7 +872,6 @@ winmine.sort_table = function(tbody, index) {
 		tbody.appendChild(row_list[i]);
 	}
 };
-
 winmine.sort_table_cells = function(_a,_b) {
 	let a = _a.cells[winmine.sort_table_col_idx];
 	let b = _b.cells[winmine.sort_table_col_idx];
@@ -874,6 +896,7 @@ winmine.sort_table_cells = function(_a,_b) {
 		}         
 	}
 };
+
 /* localStorage game history variable definition (with example values) */
 /* this defines the order for how data is saved to localStorage and saved/imported for csv, important because data items/objects aren't named when saved to localStorage, we get them by index */
 /* see winmine.i() examples for help writing value lookups by referencing the index by name in case things change */
@@ -1028,7 +1051,7 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 		new_row.insertCell(2);
 		new_row.cells[2].innerHTML = parseFloat(time).toFixed(3);
 		new_row.insertCell(3);
-		new_row.cells[3].innerHTML = new Date(datetime).toLocaleDateString('en-US', {	day: 'numeric',	month: 'numeric',	year: '2-digit', }); /* 'sv' (sweden) uses ISO 8601 YYYY-MM-DD format */
+		new_row.cells[3].innerHTML = new Date(datetime).toLocaleDateString('en-US', {	day: 'numeric',	month: 'numeric',	year: '2-digit', });
 		new_row.cells[3].title = new Date(datetime).toLocaleTimeString();
 		new_row.cells[3].setAttribute('data-sort-value', datetime);
 		new_row.insertCell(4);
@@ -1067,6 +1090,7 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 	}
 };
 
+/* for getting line points between clicked cells to apply noise to. attribution: https://stackoverflow.com/a/4672319/2100671 */
 winmine.get_line = function(y0, x0, y1, x1) {
 	const points = [];
 	const dx = Math.abs(x1 - x0);
@@ -1083,19 +1107,20 @@ winmine.get_line = function(y0, x0, y1, x1) {
 	}
 	return(points);
 }
+
 winmine.animate_cursor = function(cursor, start_sec, end_sec, start_y, start_x, end_y, end_x) {
 	/*
 	Two factors affect cursor movemment currently. The combination of the two can create a natural-ish cursor simulation if you play around. You can also create very jittery unnatural movements.
-	The challenge is there is probably a rate that needs to be applied so that movements appear more consistent even if they take much longer or shorter.
-	That or some other technique like holding slower movements back until enough time has passed that they would appear more quick/normal.
 	1. the noise formula being applied to coordinates. currently we make it return a positive number between 0 and 1, and then multiply by N pixels
-	2. the reducing of pixels we care to animate. currently keeping every 8th pint seems good enough, but experimenting could get more realistic results. */
+	2. the reducing of pixels we care to animate. currently keeping every 8th pixel seems the smoothest and I don't really understand why, but at least it's a less intense frequency than 1 or 2 pixels
+	Note: To remove the slow-moving behavior that isn't realistic for clicks that take a bit of thinking, I think we should try a technique where we delay the movement to the next point until a minimum rate that looks good. In that delay period, instead add noise-ish coordinates that give a hover effect around last clicked cell
+	*/
 	const coordinates = winmine.get_line(start_y, start_x, end_y, end_x);
 	let noise_coordinates = coordinates.map(function(coords, index) {
 		return([
 			/* 1 */
-			coords[0] + (((winmine.simplex.noise2D(0, index*1) + 1) / 2) * 4),
-			coords[1] + (((winmine.simplex.noise2D(1, index*1) + 1) / 2) * 4)
+			coords[0] + (((winmine.simplex.noise2D(0, index*1) + 1) / 2) * 3.5),
+			coords[1] + (((winmine.simplex.noise2D(1, index*1) + 1) / 2) * 3.5)
 		])
 	});
 	noise_coordinates = noise_coordinates.filter((element, index) => {
@@ -1169,6 +1194,12 @@ winmine.replay_game = function() {
 	}
 };
 
+winmine.go_to_replay_mode = function(autoplay) {
+	/* support partial-board loss playbacks by setting the action_replay variable from winmine.game_clicks when we're not already in replay mode */
+	const action_replay = (winmine.replay_mode) ? winmine.action_replay : winmine.game_clicks;
+	window.location = window.location.href.split(/[?#]/)[0] + '?height=' + winmine.height + '&width=' + winmine.width + '&mines=' + winmine.mine_count + '&board_mines=' + JSON.stringify(winmine.mines) + '&board_backup_mine=' + winmine.backup_y + '_' + winmine.backup_x + '&time=' + winmine.game_duration + '&action_replay=' +  JSON.stringify(action_replay) + '&autoplay=' + autoplay.toString();
+}
+
 winmine.update_game_over_menu = function() {
 	document.getElementsByClassName('is-prev-game-menu-frame')[0].classList.remove('is-prev-game-menu-frame-enabled');
 	document.getElementsByClassName('replay-menu-frame')[0].classList.add('replay-menu-frame-enabled');
@@ -1199,8 +1230,7 @@ winmine.select_menu_item = function(event) {
 
 	const item_text = event.target.getAttribute('data-name');
 	if(item_text === 'New') {
-		location.reload();
-
+		window.location.reload();
 	} else if(item_text === 'Beginner') {
 		const new_window_salt = winmine.random(100000,999999);
 		window.open('?height=8&width=8&mines=10', 'Beginner' + '_' + new_window_salt, 'width=148,height=211,top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
@@ -1293,12 +1323,15 @@ winmine.select_menu_item = function(event) {
 
 	} else if(item_text === 'Extra Menu*') {
 		const extra_menu = document.getElementsByClassName('extra-menu-frame')[0];
+		const extra_replay_menu = document.getElementsByClassName('extra-replay-menu-frame')[0];
 		if(event.target.classList.contains('menu-mark')) {
 			extra_menu.classList.remove('display-inline-block');
+			extra_replay_menu.classList.remove('display-inline-block');
 			event.target.classList.remove('menu-mark');
 			localStorage.setItem('setting_extra_menu', 'false');
 		} else {
 			extra_menu.classList.add('display-inline-block');
+			extra_replay_menu.classList.add('display-inline-block');
 			event.target.classList.add('menu-mark');
 			localStorage.setItem('setting_extra_menu', 'true');
 		}
@@ -1386,44 +1419,6 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 	});
 
-	/* simpler to just prevent default right click contextmenu on entire page */
-	document.body.addEventListener('contextmenu', function(event) {
-		event.preventDefault();
-	});
-
-	document.getElementsByClassName('content-game-history-table')[0].addEventListener('contextmenu', function(event) {
-		const selected_row = event.target.parentNode;
-		if(selected_row.cells[3].hasAttribute('data-sort-value')) {
-			selected_row.classList.add('content-game-history-context-row-enabled');
-			winmine.game_history_table_context_row = selected_row; /* stash so we can remove row style class when contextmenu is removed */
-			const context = document.getElementsByClassName('content-game-history-context')[0];
-			const primary_key_timestamp = selected_row.cells[3].getAttribute('data-sort-value');
-			const key = winmine.hist.filter(function(x) { return primary_key_timestamp == x[winmine.i('timestamp')]; })[0];
-			const key_name = key.join('|');
-			const item_value = JSON.parse(localStorage.getItem(key_name));
-			const height = key[winmine.i('board')].split('x')[0];
-			const width = key[winmine.i('board')].split('x')[1].split('/')[0];
-			const mine_count = key[1].split('x')[1].split('/')[1];
-			const play_again_url = '?height=' + height + '&width=' + width + '&mines=' + mine_count + '&board_mines=' + JSON.stringify(item_value[winmine.i('mines', 'v')]) + '&board_backup_mine=' + item_value[winmine.i('backup_mine', 'v')];
-			const watch_replay_url = play_again_url + '&time=' + key[winmine.i('duration')] + '&action_replay=' + JSON.stringify(item_value[winmine.i('action_replay', 'v')]);
-			context.children[0].setAttribute('data-action-url', play_again_url);
-			context.children[1].setAttribute('data-action-url', watch_replay_url);
-			context.classList.add('content-game-history-context-enabled');
-			const feature_content_frame = document.getElementsByClassName('feature-content-frame')[0];
-			const scroll_y_offset = feature_content_frame.scrollTop - 14;
-			const click_near_bottom_offset = ((feature_content_frame.clientHeight - event.clientY) < 50) ? -50 : 0;
-			context.style.left = (event.clientX) + 'px';
-			context.style.top = (event.clientY + scroll_y_offset + click_near_bottom_offset) + 'px';
-		}
-	});
-	document.getElementsByClassName('content-game-history-table')[0].addEventListener('mouseup', function(event) {
-		if(typeof winmine.game_history_table_context_row !== 'undefined') {
-			document.getElementsByClassName('content-game-history-context')[0].classList.remove('content-game-history-context-enabled');
-			winmine.game_history_table_context_row.classList.remove('content-game-history-context-row-enabled');
-			delete winmine.game_history_table_context_row;
-		}
-	});
-
 	/* gameplay cell events are delegated by the .cell-container */
 	const cell_container = document.getElementsByClassName('cell-container')[0];
 	cell_container.addEventListener('mouseover', function(event) {
@@ -1486,6 +1481,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 	cell_container.addEventListener('mouseup', function(event) {
 		if(winmine.game_over) { return; }
+		if(!winmine.mouse_is_down & !winmine.mouse2_is_down) { return; }
 		/* mouseup is managing the two ways two clear cell(s), direct left click or indirect left+right click */
 		if(event.button === 0 || event.detail.button0) { winmine.mouse_is_down = false; }
 		if(event.button === 2 || event.detail.button2) { winmine.mouse2_is_down = false; }
@@ -1538,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 	smiley_frame.addEventListener('mouseup', function(e) {
 		if(winmine.mouse_is_down_smiley) {
-			location.reload();
+			window.location = '?height=' + winmine.height + '&width=' + winmine.width + '&mines=' + winmine.mine_count;
 		}
 	});
 	smiley_frame.addEventListener('mouseover', function(e) {
@@ -1565,6 +1561,10 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 
 	/* body events */
+	/* simpler to just prevent default right click contextmenu on entire page */
+	document.body.addEventListener('contextmenu', function(event) {
+		event.preventDefault();
+	});
 	document.body.addEventListener('mousedown', function(event) {
 		if(!['INPUT','SELECT'].includes(event.target.nodeName)) {
 			event.preventDefault(); /* prevent browser from displaying the 'not allowable' cursor and trying to html draggable-item things */
@@ -1579,7 +1579,10 @@ document.addEventListener('DOMContentLoaded', function() {
 	/* winmine.exe would remember your mouse button was down even if you left the window, as long as it stayed in focus. not sure this is possible in browser */
 	document.body.addEventListener('mouseleave', function(event) {
 		if(event.button === 2) { return; }
+		if(winmine.game_over) { return; }
 		winmine.mouse_is_down = false;
+		smiley_frame.classList.remove('face-cursor-down');
+		smiley_frame.classList.add('face-neutral');
 	});
 	document.body.addEventListener('mouseup', function(event) {
 		if(event.button === 2 && !winmine.multi_cell) { return; }
@@ -1648,6 +1651,40 @@ document.addEventListener('DOMContentLoaded', function() {
 	document.querySelector('.content-best-time-game-input > input').addEventListener('keyup', event => {
 		if (event.key == 'Enter') {
 			best_time_game_ok_button.dispatchEvent(new Event('mouseup'));
+		}
+	});
+
+	document.getElementsByClassName('content-game-history-table')[0].addEventListener('contextmenu', function(event) {
+		const selected_row = event.target.parentNode;
+		if(selected_row.cells[3].hasAttribute('data-sort-value')) {
+			selected_row.classList.add('content-game-history-context-row-enabled');
+			winmine.game_history_table_context_row = selected_row; /* stash so we can remove row style class when contextmenu is removed */
+			const context = document.getElementsByClassName('content-game-history-context')[0];
+			const primary_key_timestamp = selected_row.cells[3].getAttribute('data-sort-value');
+			const key = winmine.hist.filter(function(x) { return primary_key_timestamp == x[winmine.i('timestamp')]; })[0];
+			const key_name = key.join('|');
+			const item_value = JSON.parse(localStorage.getItem(key_name));
+			const height = key[winmine.i('board')].split('x')[0];
+			const width = key[winmine.i('board')].split('x')[1].split('/')[0];
+			const mine_count = key[1].split('x')[1].split('/')[1];
+			const play_again_url = '?height=' + height + '&width=' + width + '&mines=' + mine_count + '&board_mines=' + JSON.stringify(item_value[winmine.i('mines', 'v')]) + '&board_backup_mine=' + item_value[winmine.i('backup_mine', 'v')];
+			const watch_replay_url = play_again_url + '&time=' + key[winmine.i('duration')] + '&action_replay=' + JSON.stringify(item_value[winmine.i('action_replay', 'v')]);
+			context.children[0].setAttribute('data-action-url', play_again_url);
+			context.children[1].setAttribute('data-action-url', watch_replay_url);
+			context.classList.add('content-game-history-context-enabled');
+			const feature_content_frame = document.getElementsByClassName('feature-content-frame')[0];
+			const scroll_y_offset = feature_content_frame.scrollTop - 14;
+			const click_near_bottom_offset = ((feature_content_frame.clientHeight - event.clientY) < 50) ? -50 : 0;
+			const click_near_right_offset = ((feature_content_frame.clientWidth - event.clientX) < 80) ? -80 : 0;
+			context.style.left = (event.clientX + click_near_right_offset) + 'px';
+			context.style.top = (event.clientY + scroll_y_offset + click_near_bottom_offset) + 'px';
+		}
+	});
+	document.getElementsByClassName('content-game-history-table')[0].addEventListener('mouseup', function(event) {
+		if(typeof winmine.game_history_table_context_row !== 'undefined') {
+			document.getElementsByClassName('content-game-history-context')[0].classList.remove('content-game-history-context-enabled');
+			winmine.game_history_table_context_row.classList.remove('content-game-history-context-row-enabled');
+			delete winmine.game_history_table_context_row;
 		}
 	});
 
@@ -1769,24 +1806,53 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 
 	document.querySelector('.replay-menu-item[data-replay-menu="play-pause-button"]').addEventListener('dblclick', function (event) {
-		window.location = window.location.href + '&start_paused=yes';
+		winmine.go_to_replay_mode(true);
 	});
 	document.getElementsByClassName('replay-menu-container')[0].addEventListener('mouseup', function(event) {
 		const action_name = event.target.getAttribute('data-replay-menu') || event.target.parentNode.getAttribute('data-replay-menu');
 		if(action_name === 'play-pause-button') {
+			if(!winmine.replay_mode) {
+				winmine.go_to_replay_mode(true);
+				return;
+			}
+			if(winmine.game_over) {
+				return;
+			}
 			const play_pause = document.querySelector('.replay-menu-item[data-replay-menu="play-pause-button"]');
 			if(winmine.replay_pause) {
 				winmine.replay_game();
 				play_pause.childNodes[0].classList.remove('color-red');
 				play_pause.childNodes[1].classList.add('color-red');
+				/* start timer up again */
+				if(typeof(winmine.replay_pause_time) !== 'undefined') {
+					winmine.start_timer_worker(winmine.replay_pause_time);
+				}
 			} else {
 				if(typeof(winmine.replay_setTimeout) !== 'undefined') {
 					winmine.replay_setTimeout.forEach(function(item) { clearTimeout(item); });
 				}
 				play_pause.childNodes[0].classList.add('color-red');
 				play_pause.childNodes[1].classList.remove('color-red');
+				/* stop timer */
+				if(typeof(winmine.timer_worker) !== 'undefined') {
+					/* add 1 because the action replay is saved from 0 seconds but winmine classic timer starts at 1 unless configured. .toFixed(3) because that's what  */
+					winmine.replay_pause_time = parseFloat((winmine.action_replay[winmine.replay_action_idx][0]) + 1).toFixed(3);
+					winmine.timer_worker.terminate();
+				}
 			}
 			winmine.replay_pause = (winmine.replay_pause) ? false : true;
+		}
+		
+		if(action_name === 'play-again-button') {
+			const play_again_url = '?height=' + winmine.height + '&width=' + winmine.width + '&mines=' + winmine.mine_count + '&board_mines=' + JSON.stringify(winmine.mines) + '&board_backup_mine=' + winmine.backup_y + '_' + winmine.backup_x;
+			window.location = play_again_url;
+		}
+	});
+
+	document.getElementsByClassName('is-prev-game-menu-item')[0].addEventListener('mouseup', function(event) {
+		const action_name = event.target.getAttribute('data-is-prev-game-menu');
+		if(action_name === 'try-again-button') {
+			window.location.reload();
 		}
 	});
 
@@ -1803,6 +1869,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			winmine.game_history_table_context_row.classList.remove('content-game-history-context-row-enabled');
 		}
 	});
+
+
+	/* game feature settings events */
+
 
 	/* catch the close button for any enabled item within feature-content-frame and remove any etc'-enabled' class */
 	document.getElementsByClassName('feature-content-frame')[0].addEventListener('mouseup', function(event) {
@@ -1821,7 +1891,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	/* end document load events: */
 	/* trigger game rewatch replay if in replay mode */
-	if(winmine.replay_mode & !winmine.replay_pause) {
+	if(winmine.replay_mode & winmine.replay_autoplay) {
 		document.querySelector('[data-replay-menu="play-pause-button"]').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
 	}
 
