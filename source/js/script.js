@@ -1,5 +1,4 @@
-/* Created by Anthony Fucci (thefucci@_@gmail.com) */
-/* (GPL-3.0) */
+/* Created by Anthony Fucci (anthonyfucci.com) */
 
 var winmine = {};
 
@@ -15,9 +14,9 @@ winmine.load_board_settings = function() {
 			alert('Error. Replay parameters all required together in url: \'height\' \'width\' \'mines\' \'board_mines\' \'board_backup_mine\' \'time\' and \'action_replay\'');
 			return;
 		}
-		winmine.height = 8;
-		winmine.width = 8;
-		winmine.mine_count = 10;
+		winmine.height = winmine.setting.beginner[0];
+		winmine.width = winmine.setting.beginner[1];
+		winmine.mine_count = winmine.setting.beginner[2];
 	}
 	/* url components needed to replay a previous board. this should show a refresh icon always on by default in the top right menu to indicate it is a replay. clicking the replay icon will refresh the page too. once game is played and ends, show the usual menu showed when game ends */
 	if(url_parameters.has('board_mines') && url_parameters.has('board_backup_mine')) {
@@ -35,12 +34,14 @@ winmine.load_board_settings = function() {
 		winmine.backup_x = parseInt(url_parameters.get('board_backup_mine').split('_')[1], 10);
 		winmine.game_duration = url_parameters.get('time');
 		winmine.action_replay = JSON.parse(url_parameters.get('action_replay'));
-		/* TODO: remove this expensive distinct/uniquify filter that was needed for old game saves where code pushed an extra/redundant 'l' to game_clicks (we just needed an 'm' record) */
+		/* TODO: remove this expensive distinct/uniquify filter that was needed for old game saves where code pushed an extra/redundant 'l' to game_clicks (we just needed an 'm' record). Actually think this still needs to be done? */
+		console.log(winmine.action_replay);
 		winmine.action_replay = winmine.action_replay.map(x=>x.join('|')).filter((v, i, a) => a.indexOf(v) === i).map(x=>x.split('|'));
+		console.log(winmine.action_replay);
 		/* set question mark behavior for replay based on seeing any question marks in action history. */
 		/* this does not support replay of games where the user changed the question mark setting during game play. we would need to know every time the setting was changed to do the same during replay */
 		const question_actions = winmine.action_replay.filter(x => x[1]==='q');
-		winmine.marks = (question_actions.length > 0) ? true : false;
+		winmine.setting.marks = (question_actions.length > 0) ? true : false;
 		document.querySelector('.menu-item[data-name="Marks (?)"]').classList.add('menu-item-disabled');
 		winmine.replay_mode = true;
 		winmine.replay_pause = true; /* default paused */
@@ -71,6 +72,100 @@ winmine.load_board_settings = function() {
 			document.getElementsByClassName('menu-opener-item')[0].classList.remove('color-red');
 		});
 
+	}
+};
+
+/* Many features rely on localStorage. Wrap winmine.localStorage around window.localStorage so that we can treat configurations where localStorage is disabled (incognito browser?) differently */
+winmine.is_localStorage_working = function() {
+	try {
+		localStorage.setItem('test', 'test');
+		localStorage.removeItem('test');
+		return true;
+	}
+	catch(e) {
+		return false;
+	}
+};
+winmine.wrap_localStorage = function() {
+	if(!winmine.is_localStorage_working()) {
+		/* set fallback functions */
+		winmine.localStorage = {
+			getItem: function(k) { return null; },
+			setItem: function(k, v) { return null; },
+			removeItem: function(k) { return null; },
+			keys: function() { return []; }
+		}
+	} else {
+		/* set wrapper functions */
+		winmine.localStorage = {
+			getItem: function(k) { return window.localStorage.getItem(k); },
+			setItem: function(k, v) { window.localStorage.setItem(k, v); },
+			removeItem: function(k) { window.localStorage.removeItem(k); },
+			keys: function() { return Object.keys({ ...window.localStorage }); }
+		}
+	}
+};
+
+winmine.setting = {};
+winmine.load_user_settings = function() {
+	winmine.wrap_localStorage();
+	if(winmine.localStorage.getItem('setting_beginner_board') != null) {
+		const setting = winmine.localStorage.getItem('setting_beginner_board').split(',').map(i => parseInt(i, 10));
+		winmine.setting.beginner = setting;
+		winmine.setting.beginner2 = setting[0] + 'x' + setting[1] + '/' + setting[2];
+	} else {
+		winmine.localStorage.setItem('setting_beginner_board', '8,8,10');
+		winmine.setting.beginner = [8,8,10];
+		winmine.setting.beginner2 = '8x8/10';
+	}
+	if(winmine.localStorage.getItem('setting_cell_size_height') != null) {
+		winmine.setting.y_px = parseInt(winmine.localStorage.getItem('setting_cell_size_height'), 10);
+	} else {
+		winmine.localStorage.setItem('setting_cell_size_height', '16');
+		winmine.setting.y_px = 16;
+	}
+	if(winmine.localStorage.getItem('setting_cell_size_width') != null) {
+		winmine.setting.x_px = parseInt(winmine.localStorage.getItem('setting_cell_size_width'), 10);
+	} else {
+		winmine.localStorage.setItem('setting_cell_size_width', '16');
+		winmine.setting.x_px = 16;
+	}
+	if(winmine.localStorage.getItem('setting_player_name') != null) {
+		winmine.setting.player_name = winmine.localStorage.getItem('setting_player_name');
+	} else {
+		winmine.localStorage.setItem('setting_player_name', 'Anonymous');
+		winmine.setting.player_name = 'Anonymous';
+	}
+	if(winmine.localStorage.getItem('setting_api_url') != null) {
+		winmine.setting.api_url = winmine.localStorage.getItem('setting_api_url');
+	} else {
+		winmine.localStorage.setItem('setting_api_url', 'minesweeper.win/api');
+		winmine.setting.api_url = 'minesweeper.win/api';
+	}
+	winmine.setting.use_api = ((winmine.setting.api_url.trim().length > 4 && winmine.setting.api_url.includes('.')) || /^localhost/.test(winmine.setting.api_url)) ? true : false;
+	if(winmine.localStorage.getItem('setting_extra_menu') != null) {
+		winmine.setting.extra_menu = (winmine.localStorage.getItem('setting_extra_menu') === 'true') ? true : false;
+	} else {
+		winmine.localStorage.setItem('setting_extra_menu', 'true');
+		winmine.setting.extra_menu = true;
+	}
+	if(winmine.localStorage.getItem('setting_color') != null) {
+		winmine.setting.color = (winmine.localStorage.getItem('setting_color') === 'true') ? true : false;
+	} else {
+		winmine.localStorage.setItem('setting_color', 'true');
+		winmine.setting.color = true;
+	}
+	if(winmine.localStorage.getItem('setting_marks') != null) {
+		winmine.setting.marks = (winmine.localStorage.getItem('setting_marks') === 'true') ? true : false;
+	} else {
+		winmine.localStorage.setItem('setting_marks', 'true');
+		winmine.setting.marks = true;
+	}
+	if(winmine.localStorage.getItem('setting_custom_field') != null) {
+		winmine.setting.custom_field = JSON.parse(winmine.localStorage.getItem('setting_custom_field'));
+	} else {
+		winmine.localStorage.setItem('setting_custom_field', JSON.stringify([8,8,10]));
+		winmine.setting.custom_field = [8,8,10];
 	}
 };
 
@@ -214,7 +309,7 @@ winmine.start_timer_worker = function(start_value) {
 	winmine.timer_worker = new Worker(URL.createObjectURL(winmine.start_timer_function_blob));
 	winmine.timer_worker.onmessage = function(event) {
 		winmine.set_timer(event.data);
-	}
+	};
 	winmine.timer_worker.postMessage(start_value);
 };
 
@@ -234,11 +329,38 @@ winmine.set_timer = function(new_timer) {
 	}
 };
 
-/* smaller size data that we may want to reference for every record (e.g. game history stats) are stored in the key so we can do some querying without looping through storage values and using localStorage.getItem */
+winmine.post_to_api = async function(data) {
+	try {
+		/* force https or localhost */
+		const api_url = (!/^https:\/\//.test(winmine.setting.api_url) && !/^localhost/.test(winmine.setting.api_url)) ? 'https://' + winmine.setting.api_url.replace(/http:\/\//, '') : winmine.setting.api_url;
+		const meta = {
+			browser_user_agent: navigator.userAgent,
+			browser_language: navigator.language,
+			browser_href: window.location.href,
+			/* TODO: remove this variable if it seems useless */
+			browser_referrer_origin: document.referrer.split(/\?height=|\?width=|\?mines=/)[0]
+		};
+		const post_data = Object.assign({}, meta, data);
+		fetch(api_url, {
+			method: 'POST',
+			mode: 'no-cors',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(post_data),
+		})
+		.then(result => { console.log('fetch succeeded:', result); })
+		.catch((e) => { console.warn('fetch failed:', e); });
+	} catch(e) {
+		console.warn('POST to API failed:', e);
+	}
+};
+
+/* smaller size data that we may want to reference for every record (e.g. game history stats) are stored in the key of localStorage key/value so we can more-quickly loop over just key names to parse data. larger size data are stored in the value of key/value so we can avoid using localStorage.getItem to parse over data unless necessary */
 /* key: pipe-separated '|' string of items see winmine.localStorage_key_items */
 /* value: JSON.stringify'ed array of items see winmine.localStorage_value_items */
 winmine.save_record_name = function(name) {
-	/* items in key and value aren't named, see winmine.localStorage_key_items for order/definition */
+	/* items in key and value aren't named. see winmine.localStorage_key_items and winmine.localStorage_value_items for order/definition. see winmine.i for retrieving their index */
 	const storage_key_base =
 		((winmine.game_win) ? 'w' : 'l') + '|' +
 		('' + winmine.height + 'x' + winmine.width + '/' + winmine.mine_count) + '|' +
@@ -249,26 +371,40 @@ winmine.save_record_name = function(name) {
 		winmine.flagged_cells.length + '|' +
 		winmine.game_duration + '|' +
 		winmine.game_end_time;
-	const storage_key_old = storage_key_base + '|' + 'Anonymous';
-	const storage_key = storage_key_base + '|' + name.replace(/\||\r|\n|\t/g,''); /* simply don't allow special key name array separator character | or line breaks */
+	const storage_key_old = storage_key_base + '|' + winmine.setting.player_name;
+	const storage_key = storage_key_base + '|' + name.replace(/\||\r|\n|\t/g,''); /* don't allow special key name array separator character | or line breaks */
 	const storage_value = JSON.stringify([winmine.mines_orig, (winmine.backup_y+'_'+winmine.backup_x), winmine.game_clicks]);
-	localStorage.removeItem(storage_key_old);
-	localStorage.setItem(storage_key, storage_value);	
+	winmine.localStorage.removeItem(storage_key_old);
+	winmine.localStorage.setItem(storage_key, storage_value);
+
+	/* for api */
+	if(winmine.setting.use_api) {
+		/* create named objects for json POST by mapping back to dictionaries winmine.localStorage_key_items and winmine.localStorage_value_items*/
+		const storage_key_array = storage_key.split('|');
+		const storage_key_named = Object.keys(winmine.localStorage_key_items).reduce((obj, key, index) => ({ ...obj, [key]: storage_key_array[index] }), {});
+		const storage_value_array = JSON.parse(storage_value);
+		const storage_value_named = Object.keys(winmine.localStorage_value_items).reduce((obj, key, index) => ({ ...obj, [key]: storage_value_array[index] }), {});
+		const winmine_version = (document.head.querySelector("meta[name='version']") == null) ? 'unknown' : document.head.querySelector("meta[name='version']").content;
+		const winmine_info = { app: 'winmine', version: winmine_version };
+		const api_data = Object.assign({}, winmine_info, storage_key_named, storage_value_named);
+		winmine.post_to_api(api_data);
+	}
+
 	return(storage_key);
 };
 
 winmine.save_record = function() {
 	/* save immediately using configured default save name, then do follow-up best time / name-entry check */
-	const saved_key_name = winmine.save_record_name('Anonymous');
+	const saved_key_name = winmine.save_record_name(winmine.setting.player_name);
 	if(winmine.game_win) {
 		const game_config = '' + winmine.height + 'x' + winmine.width + '/' + winmine.mine_count;
 		/* look through existing storage key names for (w)in records matching the game board config and check if current game time bests them all */
-		let keys_to_search = Object.keys({ ...localStorage }).filter(function(x) {
+		let keys_to_search = winmine.localStorage.keys().filter(function(x) {
 			return ('w' + x.split('|')[winmine.i('board')] === 'w' + game_config)
 			& (x !== saved_key_name); /* exclude the game we just saved */
 		});
-		if(['8x8/10', '16x16/40', '16x30/99'].includes(game_config)) {
-			let best_times_cleared_on = localStorage.getItem('setting_best_times_cleared_on');
+		if([winmine.setting.beginner2, '16x16/40', '16x30/99'].includes(game_config)) {
+			let best_times_cleared_on = winmine.localStorage.getItem('setting_best_times_cleared_on');
 			best_times_cleared_on = (best_times_cleared_on === null) ? Date.parse('1990-01-01') : Date.parse(best_times_cleared_on);
 			keys_to_search = keys_to_search.filter(x => Date.parse(x.split('|')[winmine.i('timestamp')]) > best_times_cleared_on);
 		}
@@ -281,7 +417,7 @@ winmine.save_record = function() {
 		const is_best_time = records_beat === keys_to_search.length;
 		if(is_best_time) {
 			let difficulty = winmine.height + 'x' + winmine.width + '/' + winmine.mine_count + ' ';
-			if(game_config === '8x8/10')   { difficulty = 'Beginner'; }
+			if(game_config === winmine.setting.beginner2)   { difficulty = 'Beginner'; }
 			if(game_config === '16x16/40') { difficulty = 'Intermediate'; }
 			if(game_config === '16x30/99') { difficulty = 'Expert'; }
 			document.getElementsByClassName('content-best-time-game-header')[0].innerHTML = 'You have the fastest time\nfor ' + difficulty + ' level.\nPlease enter your name.';
@@ -289,6 +425,16 @@ winmine.save_record = function() {
 			document.getElementsByClassName('content-best-time-game')[0].classList.add('content-best-time-game-enabled');
 			document.querySelector('.content-best-time-game-input > input').select();
 		}
+	}
+	/* clean up recent losses to some reasonable number */
+	let losses_keys = winmine.localStorage.keys().filter(item => item.substring(0,2) === 'l|');
+	if(losses_keys.length > 50) {
+		let losses_ordered = losses_keys.map(item => item.split('|')[winmine.i('timestamp')]).sort().slice(0, 40);
+		losses_keys.forEach(function(item) {
+			if(losses_ordered.includes(item.split('|')[winmine.i('timestamp')])) {
+				winmine.localStorage.removeItem(item);
+			}
+		});
 	}
 };
 
@@ -657,9 +803,10 @@ winmine.create_mine_field = function() {
 };
 
 winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
-	if(performance.getEntriesByName('game_start').length === 0) {
+	if(!winmine.game_started) {
 		performance.mark('game_start');
 		winmine.start_timer_worker('1'); /* winmine version starts at 1 */
+		winmine.game_started = true;
 	}
 	const cell_element = document.getElementById(cell_html_id);
 	if(cell_element.classList.contains('clear')) {
@@ -678,10 +825,11 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 	/* 1. if cell is a mine and at least one cell has been chosen (not first click), game over */
 	if(winmine.cells[y][x] == 9) {
 		if(winmine.cleared > 0) {
-			winmine.game_duration = winmine.get_game_duration(3);
+			winmine.game_duration = (winmine.replay_mode) ? winmine.game_duration : winmine.get_game_duration(3);
 			winmine.timer_worker.terminate();
 			winmine.game_over = true;
 			winmine.game_win = false;
+			winmine.game_end_time = (new Date(Date.now())).toISOString();
 			cell_element.classList.add('triggered-mine');
 			const smiley_frame = document.getElementsByClassName('smiley-container')[0];
 			smiley_frame.classList.remove('face-neutral');
@@ -702,6 +850,9 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 			}
 			document.getElementsByClassName('scoreboard-digits-container')[1].title = winmine.game_duration;
 			winmine.update_game_over_menu();
+			if(!winmine.replay_mode) {
+				winmine.save_record();
+			}
 			return;
 		} else {
 			/* replace mine in 1d array */
@@ -713,15 +864,17 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 			/* update cells board neighbor values */
 			winmine.update_neighbors(y, x);
 			winmine.update_neighbors(winmine.backup_y, winmine.backup_x);
+			/* recalc 3bv */
+			winmine.set_3bv();
 		}
 	}
 
 	/* 2. use the same recursion method used to get 3BV and set the 1-9 image css classes */
 	winmine.clear_mine_field(y, x);
 
-	/*  3. consider win */
+	/* 3. consider win */
 	if(winmine.cleared >= (winmine.height*winmine.width-winmine.mine_count)) {
-		winmine.game_duration = winmine.get_game_duration(3);
+		winmine.game_duration = (winmine.replay_mode) ? winmine.game_duration : winmine.get_game_duration(3);
 		winmine.timer_worker.terminate();
 		winmine.game_over = true;
 		winmine.game_win = true;
@@ -744,11 +897,12 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 };
 
 winmine.flag_cell = function(cell_html_id) {
+	console.log('flag_cell');
 	const cell_id_string = cell_html_id.substring(5);
 	const coords = winmine.id_as_y_x(cell_html_id);
 	const cell_element = document.getElementById(cell_html_id);
 	const is_flagged = cell_element.classList.contains('flag');
-	const is_marked = cell_element.classList.contains('question') && winmine.marks;
+	const is_marked = cell_element.classList.contains('question') && winmine.setting.marks;
 	let action_code;
 	if(!is_flagged && !is_marked) {
 		cell_element.classList.add('flag');
@@ -761,7 +915,7 @@ winmine.flag_cell = function(cell_html_id) {
 	} else if(is_flagged) {
 		cell_element.classList.remove('flag');
 		winmine.flagged_cells = winmine.flagged_cells.filter(item => item !== cell_id_string);
-		if(winmine.marks) {
+		if(winmine.setting.marks) {
 			cell_element.classList.add('question');
 			winmine.marked_cells.push(cell_id_string);
 			action_code = 'q';
@@ -785,7 +939,7 @@ winmine.flag_cell = function(cell_html_id) {
 /* Menu feature items */
 winmine.set_file_menu_item_marks = function() {
 	let game_is_custom = true;
-	if(winmine.height === 8 && winmine.width === 8 && winmine.mine_count === 10) {
+	if(winmine.height === winmine.setting.beginner[0] && winmine.width === winmine.setting.beginner[1] && winmine.mine_count === winmine.setting.beginner[2]) {
 		document.querySelector('.menu-item[data-name=\'Beginner\']').classList.add('menu-mark');
 		game_is_custom = false;
 	}
@@ -800,32 +954,15 @@ winmine.set_file_menu_item_marks = function() {
 	if(game_is_custom) {
 		document.querySelector('.menu-item[data-name=\'Custom...\']').classList.add('menu-mark');
 	}
-	if(winmine.replay_mode) {
-		winmine.marks = winmine.marks; /* set when replay_mode is set based on seeing any question mark in action replay */
-	} else if(localStorage.getItem('setting_marks') === null) {
-		winmine.marks = true; /* winmine.exe default */
-	} else {
-		winmine.marks = (localStorage.getItem('setting_marks') === 'true') ? true : false;
-	}
-	if(winmine.marks) {
+	if(winmine.setting.marks) {
 		document.querySelector('.menu-item[data-name=\'Marks (?)\']').classList.add('menu-mark');
 	}
-	if(localStorage.getItem('setting_color') === null) {
-		winmine.color = true; /* winmine.exe default */
-	} else {
-		winmine.color = (localStorage.getItem('setting_color') === 'true') ? true : false;
-	}
-	if(winmine.color) {
+	if(winmine.setting.color) {
 		document.querySelector('.menu-item[data-name=\'Color\']').classList.add('menu-mark');
 	} else {
 		document.documentElement.style.setProperty('filter', 'grayscale(100%)');
 	}
-	if(localStorage.getItem('setting_extra_menu') === null) {
-		winmine.extra_menu = true;
-	} else {
-		winmine.extra_menu = (localStorage.getItem('setting_extra_menu') === 'true') ? true : false;
-	}
-	if(winmine.extra_menu) {
+	if(winmine.setting.extra_menu) {
 		document.querySelector('.menu-item[data-name=\'Extra Menu*\']').classList.add('menu-mark');
 		document.getElementsByClassName('extra-menu-frame')[0].classList.add('display-inline-block');
 		document.getElementsByClassName('extra-replay-menu-frame')[0].classList.add('display-inline-block');
@@ -901,7 +1038,7 @@ winmine.sort_table_cells = function(_a,_b) {
 /* this defines the order for how data is saved to localStorage and saved/imported for csv, important because data items/objects aren't named when saved to localStorage, we get them by index */
 /* see winmine.i() examples for help writing value lookups by referencing the index by name in case things change */
 winmine.localStorage_key_items = {
-	'outcome': 'w',
+	'result': 'w',
 	'board': '8x8/10',
 	'3bv': '4',
 	'left_clicks': '2',
@@ -923,26 +1060,27 @@ winmine.i = function(itemname, kv = 'key') {
 	} else {
 		return(Object.keys(winmine.localStorage_value_items).indexOf(itemname));
 	}
-}
+};
 winmine.save_game_history = function() {
 	let csv_content = 'data:text/csv;charset=utf-8,';
 	const header = Object.keys(winmine.localStorage_key_items).join(',') + ',' + Object.keys(winmine.localStorage_value_items).join(',');
 	csv_content += header + '\r\n';
-	const winning_keys = Object.keys({ ...localStorage }).filter(x => x.substring(0,2)==='w|');
+	const select_element = document.getElementsByClassName('content-game-history-select')[0];
+	const winning_keys = (select_element.value == 'losses') ? winmine.localStorage.keys().filter(x => ['w|','l|'].includes(x.substring(0,2))) : winmine.localStorage.keys().filter(x => x.substring(0,2)==='w|');
 	winning_keys.forEach(function(key_name) {
 		let key_items = key_name.split('|');
 		/* construct csv, escape double quotes */
 		key_items = key_items.map(function(item) { return('\"' + item.replace(/"/g, '\"\"') + '\"'); }).join(',');
-		let value_items =	JSON.parse(localStorage.getItem(key_name));
+		let value_items =	JSON.parse(winmine.localStorage.getItem(key_name));
 		/* JSON.stringify any variable not already a string (our big array items) */
 		value_items = value_items.map(function(item) { item = (typeof item === 'string') ? item : JSON.stringify(item); return('\"' + item.replace(/"/g, '\"\"') + '\"'); }).join(',');
 		const row = key_items + ',' + value_items;
 		csv_content += row + "\r\n";
 	});
 	const encoded_uri = encodeURI(csv_content);
-	const link = document.createElement("a");
-	link.setAttribute("href", encoded_uri);
-	link.setAttribute("download", "winmine_history.csv");
+	const link = document.createElement('a');
+	link.setAttribute('href', encoded_uri);
+	link.setAttribute('download', 'winmine_history.csv');
 	document.body.appendChild(link);
 	link.click();
 };
@@ -1013,7 +1151,7 @@ winmine.import_game_history = function(csv) {
 				return x;
 			}
 		});
-		localStorage.setItem(localStorage_key_things.join('|'), JSON.stringify(localStorage_item_things));
+		winmine.localStorage.setItem(localStorage_key_things.join('|'), JSON.stringify(localStorage_item_things));
 	}
 	/* trigger a close-reopen of the game history menu content for a refresh effect */
 	document.querySelector('.content-game-history .content-escape-button').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
@@ -1025,8 +1163,12 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 	tbody.textContent = ''; /* keep it simple and just delete all the table records each new request */
 	let hist = winmine.hist;
 	/* check for board pattern of NxN/M */
-	if(select_option_value.match(/x|\//g).length === 2) {
-		hist = hist.filter(item => item[1] === select_option_value);
+	if(select_option_value.match(/x|\//g) != null) {
+		hist = hist.filter(item => item[0] === 'w' & item[1] === select_option_value);
+	} else if(select_option_value === 'all') {
+		hist = hist.filter(item => item[0] === 'w');
+	} else if(select_option_value === 'losses') {
+		hist = hist.filter(item => item[0] === 'l');
 	}
 	if(hist.length === 0) {
 		document.getElementsByClassName('content-game-history-no-history')[0].classList.add('content-game-history-no-history-enabled');
@@ -1061,7 +1203,7 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 	}
 
 	/* do some visual hiding/minifying of columns for small boards */
-	if(winmine.width < 14) {
+	if(window.innerWidth < 230) {
 		/* hide performance columns to the right */
 		document.querySelectorAll(
 			'.content-game-history-table table thead tr:nth-child(1) th:nth-child(n+5),' +
@@ -1071,7 +1213,7 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 			x.classList.add('display-none');
 		});
 	}
-	if(winmine.width < 11) {
+	if(window.innerWidth < 175) {
 		/* minify Boards column */
 		document.querySelectorAll('.content-game-history-table table thead tr:nth-child(1) th:nth-child(1)').forEach(function(x) {
 			x.innerText = 'B';
@@ -1083,7 +1225,7 @@ winmine.fill_game_history_table = function(tbody, select_option_value) {
 			x.innerText = '*';
 		});
 	}
-	if(winmine.width < 9) {
+	if(window.innerWidth < 164) {
 		document.querySelectorAll('.content-game-history-table table tbody td').forEach(function(x) {
 			x.style.padding = '3px';
 		});
@@ -1106,7 +1248,7 @@ winmine.get_line = function(y0, x0, y1, x1) {
 		 if (e2 < dx) { err += dx; y0  += sy; }
 	}
 	return(points);
-}
+};
 
 winmine.animate_cursor = function(cursor, start_sec, end_sec, start_y, start_x, end_y, end_x) {
 	/*
@@ -1126,7 +1268,7 @@ winmine.animate_cursor = function(cursor, start_sec, end_sec, start_y, start_x, 
 	noise_coordinates = noise_coordinates.filter((element, index) => {
 		/* 2 */
 		return index % 8 === 0;
-	})
+	});
 	const delay_ms = (end_sec*1000) - (start_sec*1000);
 	const loop_length = noise_coordinates.length-1;
 	const loop_interval_ms = Math.floor(delay_ms / loop_length);
@@ -1147,7 +1289,7 @@ winmine.animate_cursor = function(cursor, start_sec, end_sec, start_y, start_x, 
 		loop_rolling_ms = loop_rolling_ms + loop_interval_ms;
 		loop_counter++;
 	}
-}
+};
 
 winmine.replay_game = function() {
 	winmine.replay_action_idx = winmine.replay_action_idx || 0; /* ongoing counter for pause/play, set on setTimeout success */
@@ -1198,12 +1340,12 @@ winmine.go_to_replay_mode = function(autoplay) {
 	/* support partial-board loss playbacks by setting the action_replay variable from winmine.game_clicks when we're not already in replay mode */
 	const action_replay = (winmine.replay_mode) ? winmine.action_replay : winmine.game_clicks;
 	window.location = window.location.href.split(/[?#]/)[0] + '?height=' + winmine.height + '&width=' + winmine.width + '&mines=' + winmine.mine_count + '&board_mines=' + JSON.stringify(winmine.mines) + '&board_backup_mine=' + winmine.backup_y + '_' + winmine.backup_x + '&time=' + winmine.game_duration + '&action_replay=' +  JSON.stringify(action_replay) + '&autoplay=' + autoplay.toString();
-}
+};
 
 winmine.update_game_over_menu = function() {
 	document.getElementsByClassName('is-prev-game-menu-frame')[0].classList.remove('is-prev-game-menu-frame-enabled');
 	document.getElementsByClassName('replay-menu-frame')[0].classList.add('replay-menu-frame-enabled');
-	const is_small_board = (winmine.width < 10) ? true : false;
+	const is_small_board = (window.innerWidth < 164) ? true : false;
 	if(is_small_board) {
 		document.getElementsByClassName('menu-opener-frame')[0].classList.add('menu-opener-frame-enabled');
 		document.getElementsByClassName('replay-menu-frame')[0].classList.remove('replay-menu-frame-enabled');
@@ -1227,84 +1369,83 @@ winmine.select_menu_item = function(event) {
 			});
 		}
 	}
+	document.getElementsByClassName('feature-content-frame')[0].classList.remove('feature-content-enabled');
 
 	const item_text = event.target.getAttribute('data-name');
 	if(item_text === 'New') {
-		window.location.reload();
+		window.location = window.location.href.split(/[?#]/)[0] + '?height=' + winmine.height + '&width=' + winmine.width + '&mines=' + winmine.mine_count;
 	} else if(item_text === 'Beginner') {
 		const new_window_salt = winmine.random(100000,999999);
-		window.open('?height=8&width=8&mines=10', 'Beginner' + '_' + new_window_salt, 'width=148,height=211,top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
-
+		window.open('?height='+winmine.setting.beginner[0]+'&width='+winmine.setting.beginner[1]+'&mines='+winmine.setting.beginner[2], 'Beginner' + '_' + new_window_salt, 'width='+((winmine.setting.beginner[1] *winmine.setting.x_px)+20)+',height='+((winmine.setting.beginner[0] *winmine.setting.y_px)+83)+',top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
 	} else if(item_text === 'Intermediate') {
 		const new_window_salt = winmine.random(100000,999999);
-		window.open('?height=16&width=16&mines=40', 'Intermediate' + '_' + new_window_salt, 'width=276,height=339,top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
+		window.open('?height=16&width=16&mines=40', 'Intermediate' + '_' + new_window_salt, 'width='+((16*winmine.setting.y_px)+20)+',height='+((16*winmine.setting.y_px)+83)+',top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
 
 	} else if(item_text === 'Expert') {
 		const new_window_salt = winmine.random(100000,999999);
-		window.open('?height=16&width=30&mines=99', 'Expert' + '_' + new_window_salt, 'width=500,height=339,top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
+		window.open('?height=16&width=30&mines=99', 'Expert' + '_' + new_window_salt, 'width='+((30*winmine.setting.y_px)+20)+',height='+((16*winmine.setting.y_px)+83)+',top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
 
 	} else if(item_text === 'Custom...') {
 		event.target.parentNode.classList.remove('menu-container-top');
 		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 		document.getElementsByClassName('content-custom-game')[0].classList.add('content-custom-game-enabled');
-		let saved_custom_field_settings = JSON.parse(localStorage.getItem('setting_custom_field'));
-		if(saved_custom_field_settings === null) {
-			saved_custom_field_settings = [8,8,10];
-		}
-		document.getElementsByClassName('custom-game-field')[0].value = saved_custom_field_settings[0];
-		document.getElementsByClassName('custom-game-field')[1].value = saved_custom_field_settings[1];
-		document.getElementsByClassName('custom-game-field')[2].value = saved_custom_field_settings[2];
+		document.getElementsByClassName('custom-game-field')[0].value = winmine.setting.custom_field[0];
+		document.getElementsByClassName('custom-game-field')[1].value = winmine.setting.custom_field[1];
+		document.getElementsByClassName('custom-game-field')[2].value = winmine.setting.custom_field[2];
 
 	} else if(item_text === 'Marks (?)') {
 		if(event.target.classList.contains('menu-mark')) {
 			event.target.classList.remove('menu-mark');
-			localStorage.setItem('setting_marks', 'false');
-			winmine.marks = false;
+			winmine.localStorage.setItem('setting_marks', 'false');
+			winmine.setting.marks = false;
 			winmine.marked_cells.forEach(function(item) {
 				document.getElementById('cell_'+item).classList.remove('question');
 			});
 			winmine.marked_cells = [];
 		} else {
 			event.target.classList.add('menu-mark');
-			localStorage.setItem('setting_marks', 'true');
-			winmine.marks = true;
+			winmine.localStorage.setItem('setting_marks', 'true');
+			winmine.setting.marks = true;
 		}
 
 	} else if(item_text === 'Color') {
 		if(event.target.classList.contains('menu-mark')) {
 			event.target.classList.remove('menu-mark');
 			document.documentElement.style.setProperty('filter', 'grayscale(100%)');
-			localStorage.setItem('setting_color', 'false');
+			winmine.localStorage.setItem('setting_color', 'false');
 			winmine.color = false;
 		} else {
 			event.target.classList.add('menu-mark');
 			document.documentElement.style.removeProperty('filter');
-			localStorage.setItem('setting_color', 'true');
+			winmine.localStorage.setItem('setting_color', 'true');
 			winmine.color = true;
 		}
 
 	} else if(item_text === 'Best Times...') {
 		const classic_best_times_row_html = function(saved_key_names, difficulty) {
 			let difficulty_config = '';
-			if(difficulty === 'beginner') {	difficulty_config = '8x8/10';	}
+			if(difficulty === 'beginner') {	difficulty_config = winmine.setting.beginner2;	}
 			if(difficulty === 'intermediate') {	difficulty_config = '16x16/40';	}
 			if(difficulty === 'expert') {	difficulty_config = '16x30/99';	}
-			let best_times_cleared_on = localStorage.getItem('setting_best_times_cleared_on');
+			let best_times_cleared_on = winmine.localStorage.getItem('setting_best_times_cleared_on');
 			best_times_cleared_on = (best_times_cleared_on === null) ? Date.parse('1990-01-01') : Date.parse(best_times_cleared_on);
-			let result = saved_key_names.filter(value => 'w|' + value.split('|')[winmine.i('board')] + '|' === 'w|' + difficulty_config + '|')
-				.filter(value => Date.parse(value.split('|')[winmine.i('timestamp')]) > best_times_cleared_on);
+			let result = saved_key_names.filter(function(item) { item = item.split('|'); return item[winmine.i('result')] == 'w' & item[winmine.i('board')] == difficulty_config; })
+				.filter(function(item) { return Date.parse(item.split('|')[winmine.i('timestamp')]) > best_times_cleared_on; });
 			const best_time_idx = Math.min.apply(null, result.map(function(x){return x.split('|')[winmine.i('duration')]; })).toFixed(3);
 			result = result[result.findIndex(x => x.split('|')[winmine.i('duration')] === best_time_idx)];
-			result = (typeof(result)=='undefined') ? 'w|-1|-1|-1|-1|-1|999|-1|Anonymous'.split('|') : result.split('|');
+			const empty_result = Object.keys(winmine.localStorage_key_items);
+			empty_result[winmine.i('duration')] = 999;
+			empty_result[winmine.i('name')] = 'Anonymous';
+			result = (typeof(result)=='undefined') ? empty_result : result.split('|');
 			const record_difficulty = difficulty.charAt(0).toUpperCase() + difficulty.slice(1)+':';
-			const record_score = (winmine.width > 12) ? Math.round(result[winmine.i('duration')]) + ' seconds' : Math.round(result[winmine.i('duration')]);
-			const record_name = (/* winmine.width < 12 */false) ? result[winmine.i('name')].substring(0,4) : result[winmine.i('name')];
-			return('<div>' + record_difficulty + '</div><div title=\"'+result[4]+' seconds\">' + record_score + '</div><div>' + record_name + '</div>');
+			const record_score = (window.innerWidth > 175) ? Math.round(result[winmine.i('duration')]) + ' seconds' : Math.round(result[winmine.i('duration')]);
+			const record_name = (window.innerWidth < 175 && result[winmine.i('name')].length > 6) ? result[winmine.i('name')].substring(0,5) + '..' : result[winmine.i('name')];
+			return('<div>' + record_difficulty + '</div><div title=\"'+result[winmine.i('duration')]+' seconds\">' + record_score + '</div><div title=\"'+result[winmine.i('name')]+'\">' + record_name + '</div>');
 		};
 		event.target.parentNode.classList.remove('menu-container-top');
 		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 		document.getElementsByClassName('content-best-times')[0].classList.add('content-best-times-enabled');
-		const keys_to_search = Object.keys({ ...localStorage });
+		const keys_to_search = winmine.localStorage.keys();
 		const table = document.getElementsByClassName('content-best-times-table')[0];
 		table.innerHTML = classic_best_times_row_html(keys_to_search, 'beginner') + classic_best_times_row_html(keys_to_search, 'intermediate') + classic_best_times_row_html(keys_to_search, 'expert');
 
@@ -1328,12 +1469,12 @@ winmine.select_menu_item = function(event) {
 			extra_menu.classList.remove('display-inline-block');
 			extra_replay_menu.classList.remove('display-inline-block');
 			event.target.classList.remove('menu-mark');
-			localStorage.setItem('setting_extra_menu', 'false');
+			winmine.localStorage.setItem('setting_extra_menu', 'false');
 		} else {
 			extra_menu.classList.add('display-inline-block');
 			extra_replay_menu.classList.add('display-inline-block');
 			event.target.classList.add('menu-mark');
-			localStorage.setItem('setting_extra_menu', 'true');
+			winmine.localStorage.setItem('setting_extra_menu', 'true');
 		}
 
 	} else if(item_text === 'Game History') {
@@ -1341,15 +1482,17 @@ winmine.select_menu_item = function(event) {
 		document.getElementsByClassName('content-game-history')[0].classList.add('content-game-history-enabled');
 		document.getElementsByClassName('content-game-history-delete')[0].classList.remove('content-game-history-delete-enabled');
 		document.getElementsByClassName('content-game-history-no-history')[0].classList.remove('content-game-history-no-history-enabled');
-		const winning_keys = Object.keys({ ...localStorage }).filter(x => x.substring(0,2)==='w|');
+		const winning_keys = winmine.localStorage.keys().filter(x => ['w|','l|'].includes(x.substring(0,2)));
 		/* stop here if history object still matches localStorage */
-		if(winning_keys.length === winmine.hist.length) {
+		winmine.history_needs_refreshing = (typeof(winmine.history_needs_refreshing)!='undefined') ? winmine.history_needs_refreshing : false;
+		if(winning_keys.length === winmine.hist.length & !winmine.history_needs_refreshing) {
 			if(winning_keys.length === 0) {
 				document.getElementsByClassName('content-game-history-no-history')[0].classList.add('content-game-history-no-history-enabled');
 			}
 			return;
 		} else {
 			winmine.hist = [];
+			winmine.history_needs_refreshing = false;
 		}
 		const hist_datetimes = [];
 		winning_keys.forEach(function(item, index) {
@@ -1359,8 +1502,10 @@ winmine.select_menu_item = function(event) {
 			hist_datetimes.push(new_item[8]);
 		});
 		const unique_boards = [];
-		winmine.hist.forEach(function(item) { if(!unique_boards.includes(item[1])) { unique_boards.push(item[1]); }});
+		winmine.hist.filter(x => x[0]==='w').forEach(function(item) { if(!unique_boards.includes(item[1])) { unique_boards.push(item[1]); }});
 		const select_element = document.getElementsByClassName('content-game-history-select')[0];
+		select_element[0].value = winmine.setting.beginner2;
+		select_element[0].innerText = winmine.setting.beginner2 + '\xa0\xa0\xa0\xa0Beg';
 		Array.from(select_element.children).forEach(function(item) {
 			if(item.classList.contains('select-option-is-new')) {
 				item.remove();
@@ -1372,7 +1517,7 @@ winmine.select_menu_item = function(event) {
 			select_element.options[select_element.options.length-1].classList.add('select-option-is-new');
 			unique_boards.forEach(function(item) {
 				if(item === undefined) { return; }
-				if(!['8x8/10','16x16/40','16x30/99'].includes(item)) {
+				if(![winmine.setting.beginner2,'16x16/40','16x30/99'].includes(item)) {
 					select_element.options.add(new Option(item, item));
 					select_element.options[select_element.options.length-1].classList.add('select-option-is-new');
 				}
@@ -1385,18 +1530,86 @@ winmine.select_menu_item = function(event) {
 		const recent_games = winmine.hist.filter(i => recent_games_datetimes.includes(i[8]));
 		const recent_games_boards = []; recent_games.forEach(function(item) { recent_games_boards.push(item[1]); });
 		const recent_board = winmine.get_most_common_item_in_array(recent_games_boards);
-		select_element.value = recent_board;
+		select_element.value = (unique_boards.length == 0) ? 'losses' : recent_board;
 		select_element.dispatchEvent(new Event('change'));
 
-	} else if(item_text === "Settings") {
+	} else if(item_text === 'Settings') {
 		event.target.parentNode.classList.remove('menu-container-top');
 		document.getElementsByClassName('feature-content-frame')[0].classList.add('feature-content-enabled');
 		document.getElementsByClassName('content-settings')[0].classList.add('content-settings-enabled');
+		const show_saving_notification = function() {
+			const alert_div = document.createElement('div');
+			alert_div.innerText = 'Saving...';
+			alert_div.classList.add('content-settings-save-notification');
+			const alert_div_wrap = document.createElement('div');
+			alert_div_wrap.prepend(alert_div);
+			document.getElementsByClassName('content-settings')[0].prepend(alert_div_wrap);
+			setTimeout(function() { alert_div.classList.add('content-settings-save-notification-transitioned'); }, 1); /* first setTimeout gives DOM time to render above class with 100% opacity, any wait duration will do */
+			setTimeout(function() {	alert_div_wrap.parentNode.removeChild(alert_div_wrap); }, 2000);	/* second setTimeout gives DOM time to render above class with 0% opacity and ease-out of 2 second */
+		};
+		/* user setting: beginner board size */
+		document.getElementById(winmine.setting.beginner[0] + 'x' + winmine.setting.beginner[1] + '/' + winmine.setting.beginner[2]).checked = true;
+		const on_change_setting_beginner_board_size = function(new_val) {
+			show_saving_notification();
+			const save_value = (['8,8,10','9,9,10'].includes(new_val)) ? new_val : winmine.setting.beginner.join(',');
+			winmine.localStorage.setItem('setting_beginner_board', save_value);
+			winmine.setting.beginner = save_value.split(',');
+			winmine.setting.beginner2 = winmine.setting.beginner[0] + 'x' + winmine.setting.beginner[1] + '/' + winmine.setting.beginner[2];
+			winmine.history_needs_refreshing = true;
+		};
+		document.getElementById('8x8/10').addEventListener('change', function(e) { on_change_setting_beginner_board_size(e.target.value);	});
+		document.getElementById('9x9/10').addEventListener('change', function(e) { on_change_setting_beginner_board_size(e.target.value);	});
+		/* user setting: board cell height pixel size */
+		const setting_cell_y_elem =	document.getElementsByClassName('content-settings-cell-size-input')[0];
+		setting_cell_y_elem.value = winmine.setting.y_px;
+		const on_change_setting_cell_y = function(new_val) {
+			show_saving_notification();
+			const save_value = ([...Array(128).keys()].slice(4).map(String).includes(new_val)) ? new_val : '16';
+			winmine.localStorage.setItem('setting_cell_size_height', save_value);
+			winmine.setting.y_px = save_value;
+		};
+		setting_cell_y_elem.addEventListener('change', function(e) { on_change_setting_cell_y(e.target.value) });
+		setting_cell_y_elem.addEventListener('keyup' , function(e) { on_change_setting_cell_y(e.target.value) });
+		/* user setting: board cell width pixel size */
+		const setting_cell_x_elem =	document.getElementsByClassName('content-settings-cell-size-input')[1];
+		setting_cell_x_elem.value = winmine.setting.x_px;
+		const on_change_setting_cell_x = function(new_val) {
+			show_saving_notification();
+			const save_value = ([...Array(128).keys()].slice(4).map(String).includes(new_val)) ? new_val : '16';
+			winmine.localStorage.setItem('setting_cell_size_width', save_value);
+			winmine.setting.x_px = save_value;
+		};
+		setting_cell_x_elem.addEventListener('change', function(e) { on_change_setting_cell_x(e.target.value) });
+		setting_cell_x_elem.addEventListener('keyup' , function(e) { on_change_setting_cell_x(e.target.value) });
+		/* user setting: player name */
+		const setting_name_elem = document.getElementsByClassName('content-settings-default-name-input')[0];
+		setting_name_elem.value = winmine.setting.player_name;
+		const on_change_setting_player_name = function(new_val) {
+			show_saving_notification();
+			let save_value = new_val.trim().substring(0,36);
+			save_value = (save_value == '') ? 'Anonymous' : save_value;
+			winmine.localStorage.setItem('setting_player_name', save_value);
+			winmine.setting.player_name = save_value;
+		};
+		setting_name_elem.addEventListener('change', function(e) { on_change_setting_player_name(e.target.value) });
+		setting_name_elem.addEventListener('keyup' , function(e) { on_change_setting_player_name(e.target.value) });
+		/* user setting: api url */
+		const setting_url_elem = document.getElementsByClassName('content-settings-api-url')[0];
+		setting_url_elem.value = winmine.setting.api_url;
+		const on_change_setting_api_url = function(new_val) {
+			show_saving_notification();
+			let save_value = new_val.trim().substring(0,36);
+			winmine.localStorage.setItem('setting_api_url', save_value);
+			winmine.setting.api_url = save_value;
+		};
+		setting_url_elem.addEventListener('change', function(e) { on_change_setting_api_url(e.target.value) });
+		setting_url_elem.addEventListener('keyup' , function(e) { on_change_setting_api_url(e.target.value) });
 	}
 };
 
 /* Create all the javascript event listeners once <html> DOMContentLoaded */
 document.addEventListener('DOMContentLoaded', function() {
+	winmine.load_user_settings();
 	winmine.load_board_settings();
 	winmine.create_mine_field();
 	winmine.set_3bv();
@@ -1409,8 +1622,9 @@ document.addEventListener('DOMContentLoaded', function() {
 	winmine.flagged_cells = []; /* cells are pushed here on right click */
 	winmine.marked_cells = []; /* another right click, for question mark cells */
 	winmine.game_clicks = []; /* record actions for game save/replay */
-	winmine.game_over = false; /* set to true on win */
+	winmine.game_over = false; /* set to true on win/loss */
 	winmine.hist = []; /* when Game History is opened, gets filled for history table and stats */
+	winmine.game_started = false; /* for knowing a cell has been clicked (so we know the timer has been started) */
 
 	/* file menu container events are delegated from the menu item container */
 	document.getElementsByClassName('file-menu')[0].addEventListener('mouseup', function(event) {
@@ -1606,19 +1820,19 @@ document.addEventListener('DOMContentLoaded', function() {
 	});
 
 	document.querySelector('.content-custom-game-buttons > button:nth-child(1)').addEventListener('mouseup', function() {
-		let height = document.getElementsByClassName('custom-game-field')[0].value;
-		let width = document.getElementsByClassName('custom-game-field')[1].value;
-		let mines = document.getElementsByClassName('custom-game-field')[2].value;
+		let height = parseInt(document.getElementsByClassName('custom-game-field')[0].value, 10);
+		let width = parseInt(document.getElementsByClassName('custom-game-field')[1].value, 10);
+		let mines = parseInt(document.getElementsByClassName('custom-game-field')[2].value, 10);
 		if(height < 4)  { height = 4; }
 		if(width  < 4)  { width = 4; }
 		if(height > 999) { height = 999; }
 		if(width  > 999) { width = 999; }
 		if(mines < 1)  { mines = 1 }
 		if(mines > ((height*width)-1)) { mines = (height*width)-1; }
-		localStorage.setItem('setting_custom_field', JSON.stringify([height, width, mines]));
+		winmine.localStorage.setItem('setting_custom_field', JSON.stringify([height, width, mines]));
 		const new_window_salt = winmine.random(100000,999999);
-		const window_width = (width*16)+20;
-		const window_height = (height*16)+83;
+		const window_width = (width*winmine.setting.x_px)+20;
+		const window_height = (height*winmine.setting.y_px)+83;
 		window.open('?height=' + height + '&width=' + width + '&mines=' + mines, 'Custom' + '_' + new_window_salt, 'width=' + window_width + ',height=' + window_height + ',top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
 		document.getElementsByClassName('feature-content-frame')[0].classList.remove('feature-content-enabled');
 		document.getElementsByClassName('content-custom-game')[0].classList.remove('content-custom-game-enabled');
@@ -1637,7 +1851,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	document.querySelector('.content-best-times-buttons > div > button:nth-child(1)').addEventListener('mouseup', function() {
 		document.getElementsByClassName('feature-content-frame')[0].classList.remove('feature-content-enabled');
 		document.getElementsByClassName('content-best-times')[0].classList.remove('content-best-times-enabled');
-		localStorage.setItem('setting_best_times_cleared_on', new Date(Date.now()).toISOString());
+		winmine.localStorage.setItem('setting_best_times_cleared_on', new Date(Date.now()).toISOString());
 		document.querySelector('[data-name=\'Best Times...\']').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
 	});
 
@@ -1663,7 +1877,7 @@ document.addEventListener('DOMContentLoaded', function() {
 			const primary_key_timestamp = selected_row.cells[3].getAttribute('data-sort-value');
 			const key = winmine.hist.filter(function(x) { return primary_key_timestamp == x[winmine.i('timestamp')]; })[0];
 			const key_name = key.join('|');
-			const item_value = JSON.parse(localStorage.getItem(key_name));
+			const item_value = JSON.parse(winmine.localStorage.getItem(key_name));
 			const height = key[winmine.i('board')].split('x')[0];
 			const width = key[winmine.i('board')].split('x')[1].split('/')[0];
 			const mine_count = key[1].split('x')[1].split('/')[1];
@@ -1766,16 +1980,16 @@ document.addEventListener('DOMContentLoaded', function() {
 			document.getElementsByClassName('content-game-history-delete')[0].classList.remove('content-game-history-delete-enabled');
 		} else if(item_text === "game-delete-board") {
 			const target_board = document.querySelector('.content-game-history-delete div[data-game-delete-action="game-delete-board"] span span').textContent;
-			const keys_to_delete = Object.keys({ ...localStorage }).filter(function(x) { return x.split('|')[1] === target_board });
+			const keys_to_delete = winmine.localStorage.keys().filter(function(x) { return x.split('|')[1] === target_board });
 			for(const key_name of keys_to_delete) {
-				localStorage.removeItem(key_name);
+				winmine.localStorage.removeItem(key_name);
 			}
  			document.querySelector('.content-game-history .content-escape-button').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
 			document.querySelector('[data-name="Game History"]').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
 		} else if(item_text === 'game-delete-every-board') {
-			const keys_to_delete = Object.keys({ ...localStorage }).filter(function(x) { return ['w|','l|'].includes(x.substring(0,2)); });
+			const keys_to_delete = winmine.localStorage.keys().filter(function(x) { return ['w|','l|'].includes(x.substring(0,2)); });
 			for(const key_name of keys_to_delete) {
-				localStorage.removeItem(key_name);
+				winmine.localStorage.removeItem(key_name);
 			}
 			winmine.hist = [];
 			document.querySelector('.content-game-history .content-escape-button').dispatchEvent(new Event('mouseup', { 'bubbles': true }));
@@ -1842,10 +2056,58 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 			winmine.replay_pause = (winmine.replay_pause) ? false : true;
 		}
-		
-		if(action_name === 'play-again-button') {
+
+		else if(action_name === 'play-again-button') {
 			const play_again_url = '?height=' + winmine.height + '&width=' + winmine.width + '&mines=' + winmine.mine_count + '&board_mines=' + JSON.stringify(winmine.mines) + '&board_backup_mine=' + winmine.backup_y + '_' + winmine.backup_x;
 			window.location = play_again_url;
+		}
+
+		else if(action_name === 'stats-button') {
+			const game_stats_elem = document.getElementsByClassName('game-over-stats-frame')[0];
+			const stats_tbody = document.querySelector('.game-over-stats > table > tbody');
+			if(winmine.display_game_stats || false) {
+				winmine.display_game_stats = false;
+				game_stats_elem.classList.remove('game-over-stats-enabled');
+				stats_tbody.innerText = '';
+				return;
+			}
+			winmine.display_game_stats = true;
+			game_stats_elem.classList.add('game-over-stats-enabled');
+			const board_label = function(board) {
+				if(board == winmine.setting.beginner2) { return 'Beg.'; }
+				else if(board == '16x16/40') { return 'Int.'; }
+				else if(board == '16x30/99') { return 'Exp.'; }
+				else return board;
+			};
+			const stats = {
+				'Result': (winmine.game_win) ? 'Win' : 'Loss',
+				'Board': board_label('' + winmine.height + 'x' + winmine.width + '/' + winmine.mine_count),
+				'Time': winmine.game_duration,
+				'3BV': winmine._3bv,
+				'3BV/s': (winmine._3bv / winmine.game_duration).toFixed(2),
+				'RQP': (winmine.game_duration / (winmine._3bv / winmine.game_duration)).toFixed(0),
+				'Flags used': winmine.flagged_cells.length,
+				'Clicks': winmine.game_clicks.length,
+				'Left clicks': winmine.game_clicks.filter(x => ['l'].includes(x[1])).length,
+				'Multi clicks': winmine.game_clicks.filter(x => ['m'].includes(x[1])).length,
+				'Right clicks': winmine.game_clicks.filter(x => ['f','q','c'].includes(x[1])).length
+			};
+			const stats_keys = Object.keys(stats);
+			for(var i = 0; i < stats_keys.length;i++) {
+				stats_tbody.insertRow(-1);
+				const new_row = stats_tbody.rows[i];
+				new_row.insertCell(0);
+				new_row.cells[0].innerHTML = stats_keys[i];
+				new_row.insertCell(1);
+				new_row.cells[1].innerHTML = stats[stats_keys[i]];
+			}
+			winmine.remove_game_stats = function(e) {
+				if(['TABLE','TBODY','TR','TD'].includes(e.target.nodeName)) { return; }
+				winmine.display_game_stats = false;
+				game_stats_elem.classList.remove('game-over-stats-enabled');
+				stats_tbody.innerText = '';
+			};
+			game_stats_elem.addEventListener('mouseleave', winmine.remove_game_stats);
 		}
 	});
 
@@ -1861,18 +2123,14 @@ document.addEventListener('DOMContentLoaded', function() {
 			const new_window_url = event.target.getAttribute('data-action-url');
 			const width = new_window_url.match(/width=(.*?)&/)[1];
 			const height = new_window_url.match(/height=(.*?)&/)[1];
-			const window_width = (width*16)+20;
-			const window_height = (height*16)+83;
+			const window_width = (width*winmine.setting.x_px)+20;
+			const window_height = (height*winmine.setting.y_px)+83;
 			const new_window_salt = winmine.random(100000,999999);
 			window.open(new_window_url, 'Replay' + '_' + new_window_salt, 'width= ' + window_width + ',height=' + window_height + ',top=' + (window.screenY+50) + ',left=' + (window.screenX+50));
 			document.getElementsByClassName('content-game-history-context')[0].classList.remove('content-game-history-context-enabled');
 			winmine.game_history_table_context_row.classList.remove('content-game-history-context-row-enabled');
 		}
 	});
-
-
-	/* game feature settings events */
-
 
 	/* catch the close button for any enabled item within feature-content-frame and remove any etc'-enabled' class */
 	document.getElementsByClassName('feature-content-frame')[0].addEventListener('mouseup', function(event) {

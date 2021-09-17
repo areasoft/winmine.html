@@ -1,3 +1,4 @@
+/* Created by Anthony Fucci (anthonyfucci.com) */
 html, body {
 	overflow: hidden;
 	height: 100vh;
@@ -5,7 +6,6 @@ html, body {
 	margin: 0;
 	cursor: default;
 }
-
 
 /* File menu stuff */
 .file-menu-frame {
@@ -103,6 +103,15 @@ html, body {
 	background-repeat: no-repeat;
 	background-position: 6px 50%;
 }
+.file-menu {
+	white-space: nowrap;
+}
+.game-file-menu-frame,
+.help-file-menu-frame,
+.extra-menu-frame,
+.feature-content-frame {
+	white-space: normal;
+}
 
 .extra-replay-menu-frame,
 .replay-menu-frame,
@@ -153,6 +162,7 @@ html, body {
 }
 .replay-menu-item[data-replay-menu="play-pause-button"] {
 	padding-left: 4px;
+	padding-right: 3px;
 }
 .replay-menu-item[data-replay-menu="play-pause-button"] span:first-child {
 	font-weight: bold;
@@ -433,6 +443,49 @@ html, body {
 }
 .feature-content-enabled {
 	display: block !important;
+}
+
+/* .game-over-stats-parent {
+	position: relative;
+	width: 100%;
+} */
+.game-over-stats-frame {
+	border-top: 1px solid rgba(227,227,227);
+	border-left: 1px solid rgba(227,227,227);
+	border-right: 1px solid rgba(105,105,105);
+	border-bottom: 1px solid rgba(105,105,105);
+	font-family: Tahoma, Geneva, sans-serif;
+	font-size: 8pt;
+	position: absolute;
+	right: 0px;
+/* 	overflow-y: scroll;
+	scrollbar-width: none; */
+	display: none;
+}
+.game-over-stats {
+	border-top: 1px solid rgba(255,255,255);
+	border-left: 1px solid rgba(255,255,255);
+	border-right: 1px solid rgba(160,160,160);
+	border-bottom: 1px solid rgba(160,160,160);
+	background-color: rgba(240,240,240);
+	padding-right: 5px;
+	padding-left: 5px;
+}
+.game-over-stats-enabled {
+	display: block !important;
+}
+.game-over-stats > table {
+	border-collapse: collapse;
+	border-bottom: 1px solid #cccccc;
+}
+.game-over-stats > table > tbody tr td {
+	border-top: 1px solid #cccccc;
+}
+.game-over-stats > table > tbody tr td:last-child {
+	text-align: right;
+}
+.game-over-stats > table > tbody tr:hover {
+	background-color: rgba(255, 255, 0, 0.2);
 }
 
 /* Custom game field stuff */
@@ -796,9 +849,27 @@ li {
 
 .content-settings {
 	display: none;
+	max-width: 175px;
 }
 .content-settings-enabled {
 	display: block;
+}
+.content-settings-save-notification-wrap {
+	position: absolute;
+	width: 20px;
+	top: 0px;
+	right: calc(100% - 20px);
+}
+.content-settings-save-notification {
+	position: fixed;
+	background-color: rgba(240,240,240);
+	height: 20px;
+	padding-left: 4px;
+	opacity: 1;
+}
+.content-settings-save-notification-transitioned {
+	opacity: 0;
+	transition: 2s ease-out;
 }
 .content-settings-header {
 	padding-bottom: 2px;
@@ -831,7 +902,8 @@ li {
 .content-settings-cell-size > div {
 	display: inline-block;
 }
-.content-settings-default-name-input {
+.content-settings-default-name-input,
+.content-settings-api-url {
 	width: 90%;
 	max-width: 200px;
 }
