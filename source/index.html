@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8"/>
+	<!-- Created by Anthony Fucci (anthonyfucci.com) -->
 	<title>winmine.html</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<link rel="stylesheet" type="text/css" href="css/style.css"/>
@@ -63,6 +64,13 @@
 					<div class="is-prev-game-menu-container">
 						<div class="is-prev-game-menu-item" data-is-prev-game-menu="try-again-button" title="Try again">⟳</div>
 					</div>
+				</div>
+			</div>
+			<div class="game-over-stats-frame">
+				<div class="game-over-stats">
+					<table aria-describedby="game stats">
+						<tbody></tbody>
+					</table>					
 				</div>
 			</div>
 			<div class="feature-content-frame">
@@ -168,13 +176,13 @@
 						<div class="content-settings-header">Settings</div>
 						<div class="content-settings-item-separator"></div>
 						<div class="content-settings-item-label">Beginner Board Size</div>
-						<div class="content-settings-item-body" data-setting-name="beginner-board">
+						<div class="content-settings-item-body">
 							<div>
-								<input type="radio" id="8x8/10" name="board" value="8x8/10">
+								<input type="radio" id="8x8/10" name="board" value="8,8,10">
 								<label for="8x8/10" title="default">8x8</label>
 							</div>
 							<div>
-								<input type="radio" id="9x9/10" name="board" value="9x9/10">
+								<input type="radio" id="9x9/10" name="board" value="9,9,10">
 								<label for="9x9/10">9x9</label>
 							</div>
 						</div>
@@ -186,13 +194,18 @@
 						</div>
 						<div class="content-settings-item-separator"></div>
 						<div class="content-settings-item-label" title="Default name to save with games">Player Name</div>
-						<div class="content-settings-item-body" data-setting-name="default-name">
+						<div class="content-settings-item-body">
 							<div><input type="text" placeholder="Anonymous" class="content-settings-default-name-input"></div>
+						</div>
+						<div class="content-settings-item-separator"></div>
+						<div class="content-settings-item-label" title="">Public API</div>
+						<div class="content-settings-item-body">
+							<div><input type="text" placeholder="ex: minesweeper.win/api" class="content-settings-api-url" title="URL of web api accepting game history data. Clear the field to disable. URLs are forced https unless localhost."></div>
 						</div>
 						<br><br>
 						<div class="content-settings-item-separator"></div>
 						<div>
-							Is there a setting or feature you want to see? Consider <a href="#">sharing</a> it-
+							Is there a setting or feature you want to see? <a href="https://github.com/areasoft/winmine.html">This project is public.</a>
 						</div>
 					</div>
 				</div>
