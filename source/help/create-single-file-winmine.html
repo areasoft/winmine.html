@@ -1,0 +1,112 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>create-single-file-winmine</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script type = "text/javascript">
+
+create_string = function(file_list) {
+	let promises = [];
+	for (let file of file_list) {
+		file_names.push(file.name);
+		let filePromise = new Promise(resolve => {
+			let reader = new FileReader();
+			reader.readAsText(file);
+			reader.onload = () => resolve(reader.result);
+		});
+		promises.push(filePromise);
+	}
+	console.log(promises.length);
+	Promise.all(promises).then(file_content => {
+		let input_html = '';
+		let input_css = '';
+		let input_js = '';
+		for(let i = 0; i < file_content.length; i += 1) {
+			file_name = file_names[i];
+			if(/(.html)$/.test(file_name)) {
+				input_html = file_content[i];
+			} else if(/(.css)$/.test(file_name)) {
+				input_css = file_content[i];
+			} else if(/(.js)$/.test(file_name)) {
+				input_js = file_content[i];
+			}
+		}
+		/* consider removing single-line comments to support them */
+		/* */
+		/* remove white space including line breaks */
+		let output_css = input_css.replace(/\s+/g, ' ');
+		let output_js = input_js.replace(/\s+/g, ' ');
+		/* remove multiline comments */
+		output_css = output_css.replace(/\/\*[\s\S]*?\*\//g, '');
+		output_js = output_js.replace(/\/\*[\s\S]*?\*\//g, '');
+		/* consider removing spaces to save more bytes. preserve the key words next/const/let/var/new which need trailing space */
+		/* */
+		/* concatenate into inline expression */
+		output_css = '<style>' + output_css + '</style>';
+		output_js = '<script type = "text/javascript">' + output_js + '<\/script>';
+		/* replace existing non-inline references in html file */
+		output_html = input_html.replace(/<link rel="stylesheet" type="text\/css" href="css\/style.css"\/>/, output_css);
+		output_html = output_html.replace(/<script charset="utf-8" src="js\/script.js"><\/script>/, output_js);
+
+		/* add version fingerprint after <title> line */
+		const utc_formatted = new Date().toISOString().split('T').join(' ').substring(0,16); /* split+join to remove 'T', substring to remove seconds */
+		output_html = output_html.replace(/<title>winmine.html<\/title>/, '<title>winmine.html</title>\r\n\t<meta name="version" content="' + utc_formatted + '">');
+		
+		var a = document.createElement('a');
+		var file = new Blob([output_html], {type: 'text/html'});
+		a.href = URL.createObjectURL(file);
+		a.download = 'winmine.html';
+		a.click();
+	});
+}
+
+var file_names = [];
+var file_text = [];
+document.addEventListener('DOMContentLoaded', function() {
+
+	function dragenter(e) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+
+	function dragover(e) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+
+	var file_set = [];
+	function drop(e) {
+		e.stopPropagation();
+		e.preventDefault();
+		var files = e.dataTransfer.files;
+		for (let i = 0, l = files.length; i < l; i++) {
+			file_set.push(files[i]);
+		}
+		if(file_set.length == 3) {
+			create_string(file_set);
+		}
+	}
+
+	let dropbox;
+	dropbox = document.getElementById("dropbox");
+	dropbox.addEventListener("dragenter", dragenter, false);
+	dropbox.addEventListener("dragover", dragover, false);
+	dropbox.addEventListener("drop", drop, false);
+
+});
+
+	
+</script>
+</head>
+<body>
+
+<div id="dropbox" style="width:100vw; height:100vh;">
+	<div>
+		Drag .html, .css, and .js file into this window. Drag them at once or one at a time.
+		<br>The .css and .js external file source references in the .html file will be replaced with inline source references using the file contents.
+	</div>
+</div>
+
+</body>
+</html>

@@ -256,7 +256,7 @@ html, body {
 	border-right: 2px solid rgba(128,128,128);
 	border-bottom: 2px solid rgba(128,128,128);
 }
-/* for the main cell visual classes, use !important to replace default cell styling so we don't have to maintain a default class we always remove. not ideal but convenient and lets us pass some performance/managing to css */
+/* for the main cell visual classes, use !important to replace default cell styling of .cell-container so we don't have to maintain on/off class toggling at this level. the important's can probably be reduced by making svgs more consistent (background-size / background-position) */
 .active, .clear, .notmine {
 	padding: 1px 2px 2px 1px;
 	border-top: 1px solid rgba(128,128,128) !important;
@@ -485,7 +485,7 @@ html, body {
 	text-align: right;
 }
 .game-over-stats > table > tbody tr:hover {
-	background-color: rgba(255, 255, 0, 0.2);
+	background-color: rgba(255, 255, 0, 0.1);
 }
 
 /* Custom game field stuff */

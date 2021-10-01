@@ -34,10 +34,6 @@ winmine.load_board_settings = function() {
 		winmine.backup_x = parseInt(url_parameters.get('board_backup_mine').split('_')[1], 10);
 		winmine.game_duration = url_parameters.get('time');
 		winmine.action_replay = JSON.parse(url_parameters.get('action_replay'));
-		/* TODO: remove this expensive distinct/uniquify filter that was needed for old game saves where code pushed an extra/redundant 'l' to game_clicks (we just needed an 'm' record). Actually think this still needs to be done? */
-		console.log(winmine.action_replay);
-		winmine.action_replay = winmine.action_replay.map(x=>x.join('|')).filter((v, i, a) => a.indexOf(v) === i).map(x=>x.split('|'));
-		console.log(winmine.action_replay);
 		/* set question mark behavior for replay based on seeing any question marks in action history. */
 		/* this does not support replay of games where the user changed the question mark setting during game play. we would need to know every time the setting was changed to do the same during replay */
 		const question_actions = winmine.action_replay.filter(x => x[1]==='q');
@@ -349,10 +345,10 @@ winmine.post_to_api = async function(data) {
 			},
 			body: JSON.stringify(post_data),
 		})
-		.then(result => { console.log('fetch succeeded:', result); })
-		.catch((e) => { console.warn('fetch failed:', e); });
+		.then(result => { /* console.log('fetch succeeded:', result); */ })
+		.catch((e) => { /* console.warn('fetch failed:', e); */ });
 	} catch(e) {
-		console.warn('POST to API failed:', e);
+		/* console.warn('POST to API failed:', e); */
 	}
 };
 
@@ -449,7 +445,7 @@ winmine.get_game_duration = function(round_to) {
 
 winmine.id_as_y_x = function(id_string) {
 	const as_array = id_string.substring(5).split('_');
-	return([parseInt(as_array[0]), parseInt(as_array[1])]);
+	return([parseInt(as_array[0], 10), parseInt(as_array[1], 10)]);
 };
 
 /* for left+right click multi-cell visual styling */
@@ -802,11 +798,19 @@ winmine.create_mine_field = function() {
 	winmine.mines_orig = winmine.mines.slice(0); /* copy for saving */
 };
 
-winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
+winmine.choose_cell = function(cell_html_id) {
 	if(!winmine.game_started) {
 		performance.mark('game_start');
 		winmine.start_timer_worker('1'); /* winmine version starts at 1 */
 		winmine.game_started = true;
+		/* add pre-gameplay actions flags/question-marks to game_clicks so it's stored with history */
+		if(winmine.flagged_cells.length !== 0) {
+			winmine.game_clicks = winmine.flagged_cells.map(item=>['-1','f',item]);
+		}
+		if(winmine.marked_cells !== 0) {
+			const new_actions = winmine.marked_cells.map(item=>['-1','q',item]);
+			winmine.game_clicks = winmine.game_clicks.concat(new_actions);
+		}
 	}
 	const cell_element = document.getElementById(cell_html_id);
 	if(cell_element.classList.contains('clear')) {
@@ -814,15 +818,15 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 	}
 	cell_element.classList.add('clear');
 	const coords = winmine.id_as_y_x(cell_html_id);
-	const y = parseInt(coords[0], 10);
-	const x = parseInt(coords[1], 10);
+	const y = coords[0];
+	const x = coords[1];
 	const cell_id_string = y+'_'+x;
 
-	const game_click_code = (winmine.multi_cell) ? 'm': 'l';
+/* 	const game_click_code = (winmine.multi_cell) ? 'm': 'l';
 	const clicked_cell_id_string = (winmine.multi_cell) ? multi_cell_html_id.substring(5) : cell_id_string;
-	winmine.game_clicks.push([winmine.get_game_duration(1), game_click_code, clicked_cell_id_string]);
+	winmine.game_clicks.push([winmine.get_game_duration(1), game_click_code, clicked_cell_id_string]); */
 	
-	/* 1. if cell is a mine and at least one cell has been chosen (not first click), game over */
+	/* 1. consider loss, if cell is a mine and at least one cell has been chosen (not first click) */
 	if(winmine.cells[y][x] == 9) {
 		if(winmine.cleared > 0) {
 			winmine.game_duration = (winmine.replay_mode) ? winmine.game_duration : winmine.get_game_duration(3);
@@ -897,7 +901,6 @@ winmine.choose_cell = function(cell_html_id, multi_cell_html_id) {
 };
 
 winmine.flag_cell = function(cell_html_id) {
-	console.log('flag_cell');
 	const cell_id_string = cell_html_id.substring(5);
 	const coords = winmine.id_as_y_x(cell_html_id);
 	const cell_element = document.getElementById(cell_html_id);
@@ -969,21 +972,21 @@ winmine.set_file_menu_item_marks = function() {
 	}
 };
 
-winmine.get_most_common_item_in_array = function(array_of_items) {
+winmine.get_most_common_item_in_array = function(arr) {
 	let max_count = 1;
 	let freq = 0;
 	let max_item;
-	for (let i=0; i<array_of_items.length; i++)
+	for (let i=0; i<arr.length; i++)
 	{
-		for (let j=i; j<array_of_items.length; j++)
+		for (let j=i; j<arr.length; j++)
 		{
-			if (array_of_items[i] == array_of_items[j]) {
+			if (arr[i] == arr[j]) {
 				freq++;
 			}
 			if (max_count < freq)
 			{
 				max_count = freq; 
-				max_item = array_of_items[i];
+				max_item = arr[i];
 			}
 		}
 		freq = 0;
@@ -1266,6 +1269,10 @@ winmine.animate_cursor = function(cursor, start_sec, end_sec, start_y, start_x, 
 		])
 	});
 	noise_coordinates = noise_coordinates.filter((element, index) => {
+		/* keep first and last point to avoid jitter */
+		if(index == 0 || index == noise_coordinates.length-1) {
+			return true;
+		}
 		/* 2 */
 		return index % 8 === 0;
 	});
@@ -1298,6 +1305,33 @@ winmine.replay_game = function() {
 	winmine.simplex = winmine.simplex_open(Date.now()); /* cursor noise */
 	for (let i = 0; i < winmine.replay_action_idx; i++) {
 		replay_action_duration = replay_action_duration + (parseFloat(winmine.action_replay[i+1][0], 10) - parseFloat(winmine.action_replay[i][0], 10));
+	}
+	/* make replay support pre-gameplay flags/question-marks */
+	if(winmine.replay_action_idx === 0) {
+		for(let i = 0; i < winmine.action_replay.length; i++) {
+			if(winmine.action_replay[i][0] === '-1') {
+				const elem = document.getElementById('cell_'+winmine.action_replay[i][2]);
+				const coords = winmine.id_as_y_x(elem.id);
+				if(winmine.action_replay[i][1] === 'f') {
+					elem.classList.add('flag');
+					winmine.flagged_cells.push(winmine.action_replay[i][2]);
+					if(winmine.cells[coords[0]][coords[1]] != 9) {
+						winmine.cells[coords[0]][coords[1]] = 10;
+					}
+				} else if(winmine.action_replay[i][1] === 'q') {
+					elem.classList.add('question');
+					winmine.marked_cells.push(winmine.action_replay[i][2]);
+					if(winmine.cells[coords[0]][coords[1]] != 9) {
+						winmine.cells[coords[0]][coords[1]] = winmine.get_neighbor_mine_freq(coords[0],coords[1]);
+					}
+				}
+			} else {
+				winmine.action_start_idx = i;
+				break;
+			}
+		}
+		winmine.pre_action_replay = winmine.action_replay.slice(0, winmine.action_start_idx);
+		winmine.action_replay = winmine.action_replay.slice(winmine.action_start_idx);
 	}
 	const action_count = winmine.action_replay.length;
 	const cursor = document.getElementsByClassName('replay-cursor')[0];
@@ -1338,7 +1372,8 @@ winmine.replay_game = function() {
 
 winmine.go_to_replay_mode = function(autoplay) {
 	/* support partial-board loss playbacks by setting the action_replay variable from winmine.game_clicks when we're not already in replay mode */
-	const action_replay = (winmine.replay_mode) ? winmine.action_replay : winmine.game_clicks;
+	const complete_action_replay = (typeof(winmine.pre_action_replay) !== 'undefined' && winmine.pre_action_replay.length !== 0) ? winmine.pre_action_replay.concat(winmine.action_replay) : winmine.action_replay;
+	const action_replay = (winmine.replay_mode) ? complete_action_replay : winmine.game_clicks;
 	window.location = window.location.href.split(/[?#]/)[0] + '?height=' + winmine.height + '&width=' + winmine.width + '&mines=' + winmine.mine_count + '&board_mines=' + JSON.stringify(winmine.mines) + '&board_backup_mine=' + winmine.backup_y + '_' + winmine.backup_x + '&time=' + winmine.game_duration + '&action_replay=' +  JSON.stringify(action_replay) + '&autoplay=' + autoplay.toString();
 };
 
@@ -1625,6 +1660,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	winmine.game_over = false; /* set to true on win/loss */
 	winmine.hist = []; /* when Game History is opened, gets filled for history table and stats */
 	winmine.game_started = false; /* for knowing a cell has been clicked (so we know the timer has been started) */
+	winmine.most_recent_id = ''; /* stop left+right multi clicks from double-triggering cell event */
 
 	/* file menu container events are delegated from the menu item container */
 	document.getElementsByClassName('file-menu')[0].addEventListener('mouseup', function(event) {
@@ -1699,9 +1735,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		/* mouseup is managing the two ways two clear cell(s), direct left click or indirect left+right click */
 		if(event.button === 0 || event.detail.button0) { winmine.mouse_is_down = false; }
 		if(event.button === 2 || event.detail.button2) { winmine.mouse2_is_down = false; }
+		const elem_id = event.target.id;
 		if(winmine.multi_cell) {
 			if(event.target.classList.length >= 2) {
-				const coords = winmine.id_as_y_x(event.target.id);
+				const coords = winmine.id_as_y_x(elem_id);
 				const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
 				const flagged_neighboring_cells = [];
 				document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
@@ -1710,17 +1747,27 @@ document.addEventListener('DOMContentLoaded', function() {
 					}
 					element.classList.remove('active');
 				});
-				if(flagged_neighboring_cells.length == event.target.classList[1].substring(1)) {
+				
+				if(flagged_neighboring_cells.length == event.target.classList[1].substring(1) && elem_id !== winmine.most_recent_id) {
+					winmine.most_recent_id = elem_id;
 					const cells_to_choose = neighboring_cells.filter(x => !flagged_neighboring_cells.includes(x));
+					let already_cleared = 0;
 					cells_to_choose.forEach(function (element) {
 						const e = document.getElementById('cell_'+element);
-						if(e.classList.contains('clear')) { return; }
-						winmine.choose_cell('cell_'+element, event.target.id);
+						if(e.classList.contains('clear')) {
+							already_cleared = already_cleared + 1;
+							return;
+						}
+						winmine.choose_cell('cell_'+element);
 						e.classList.remove('question'); /* marked cells are triggered like normal cells. remove class to prevent confusion */
 					});
+					/* only record game clicks that trigger a cell (effective clicks) */
+					if(neighboring_cells.length > already_cleared) {
+						winmine.game_clicks.push([winmine.get_game_duration(1), 'm', elem_id.substring(5)]);
+					}
 				}
 			} else {
-				const coords = winmine.id_as_y_x(event.target.id);
+				const coords = winmine.id_as_y_x(elem_id);
 				const neighboring_cells = winmine.get_array_of_neighbor_ids(coords[0], coords[1]);
 				document.querySelectorAll('#cell_' + neighboring_cells.join(',#cell_')).forEach(function (element) {
 					element.classList.remove('active');
@@ -1735,8 +1782,14 @@ document.addEventListener('DOMContentLoaded', function() {
 		if(event.button === 2 || event.detail.button2) { return; }
 		if(event.target.classList.contains('flag')) { return; }
 		if(event.target.classList.contains('question')) { return; }
+		if(event.target.classList.contains('clear')) { return; }
 		event.target.classList.remove('active');
-		winmine.choose_cell(event.target.id);
+		if(winmine.game_started) {
+			winmine.game_clicks.push([winmine.get_game_duration(1), 'l', elem_id.substring(5)]);
+		} else {
+			winmine.game_clicks.push(['0.0', 'l', elem_id.substring(5)]);
+		}
+		winmine.choose_cell(elem_id);
 	});
 
 	 /* game smiley event behavior */
@@ -2037,6 +2090,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				winmine.replay_game();
 				play_pause.childNodes[0].classList.remove('color-red');
 				play_pause.childNodes[1].classList.add('color-red');
+				play_pause.title = 'Pause (double-click to restart)';
 				/* start timer up again */
 				if(typeof(winmine.replay_pause_time) !== 'undefined') {
 					winmine.start_timer_worker(winmine.replay_pause_time);
@@ -2047,6 +2101,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				}
 				play_pause.childNodes[0].classList.add('color-red');
 				play_pause.childNodes[1].classList.remove('color-red');
+				play_pause.title = 'Play (double-click to restart)';
 				/* stop timer */
 				if(typeof(winmine.timer_worker) !== 'undefined') {
 					/* add 1 because the action replay is saved from 0 seconds but winmine classic timer starts at 1 unless configured. .toFixed(3) because that's what  */
@@ -2079,13 +2134,15 @@ document.addEventListener('DOMContentLoaded', function() {
 				else if(board == '16x30/99') { return 'Exp.'; }
 				else return board;
 			};
+			const result_label = (winmine.game_win) ? 'Win' : 'Loss';
+			const duration = (winmine.game_over) ? parseFloat(winmine.game_duration) : parseFloat(winmine.get_game_duration(3));
 			const stats = {
-				'Result': (winmine.game_win) ? 'Win' : 'Loss',
+				'Result': (winmine.game_over) ? result_label : '-',
 				'Board': board_label('' + winmine.height + 'x' + winmine.width + '/' + winmine.mine_count),
-				'Time': winmine.game_duration,
+				'Time': duration,
 				'3BV': winmine._3bv,
-				'3BV/s': (winmine._3bv / winmine.game_duration).toFixed(2),
-				'RQP': (winmine.game_duration / (winmine._3bv / winmine.game_duration)).toFixed(0),
+				'3BV/s': (winmine._3bv / duration).toFixed(2),
+				'RQP': (duration / (winmine._3bv / duration)).toFixed(0),
 				'Flags used': winmine.flagged_cells.length,
 				'Clicks': winmine.game_clicks.length,
 				'Left clicks': winmine.game_clicks.filter(x => ['l'].includes(x[1])).length,
