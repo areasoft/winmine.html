@@ -4,7 +4,7 @@
 
 __The classic Windows experience in a single file for your web browser.__
 
-[winmine.html](minesweeper.win) <- Click to play
+[winmine.html](https://minesweeper.win) <- Click to play
 
 Minesweeper needs little introduction. A computer mouse point-and-click puzzle game with a simple timer and best times feature that made players gamers and speedrunners.
 
@@ -35,7 +35,7 @@ For security, desktop browsers always show their url bar, and they always permit
 - Play somewhere hosting a `winmine.html` file like [here](http://minesweeper.win/)
 - Download a `winmine.html` file with your web browser's "Save page as..." or "Save link as..." options by right-clicking one of the files below and then opening it from your computer   
 [winmine.html](https://raw.githubusercontent.com/areasoft/winmine.html/main/winmine.html) (from githubusercontent .com)  
-[winmine.html](minesweeper.win/winmine.html)  (from minesweeper .win)  
+[winmine.html](https://minesweeper.win/winmine.html)  (from minesweeper .win)  
 - Example of a link to pop up a beginner window:
 
 	```html
