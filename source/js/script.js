@@ -1830,6 +1830,9 @@ document.addEventListener('DOMContentLoaded', function() {
 	/* body events */
 	/* simpler to just prevent default right click contextmenu on entire page */
 	document.body.addEventListener('contextmenu', function(event) {
+		if(event.target.nodeName === 'A') {
+			return;
+		}
 		event.preventDefault();
 	});
 	document.body.addEventListener('mousedown', function(event) {
