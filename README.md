@@ -33,8 +33,8 @@ For security, desktop browsers always show their url bar, and they always permit
 ## Usage
 
 - Play somewhere hosting a `winmine.html` file like [here](http://minesweeper.win/)
-- Download a `winmine.html` file with your web browser's "Save page as..." or "Save link as..." options by right-clicking one of the files below and then opening it from your computer   
-[winmine.html](https://raw.githubusercontent.com/areasoft/winmine.html/main/winmine.html) (from githubusercontent .com)  
+- Download a `winmine.html` file from a link below with your web browser's "Save page as..." or "Save link as..." option:   
+[winmine.html](https://areasoft.github.io/winmine.html/winmine.html) (from github .io)  
 [winmine.html](https://minesweeper.win/winmine.html)  (from minesweeper .win)  
 - Example of a link to pop up a beginner window:
 
