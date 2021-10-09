@@ -822,10 +822,6 @@ winmine.choose_cell = function(cell_html_id) {
 	const x = coords[1];
 	const cell_id_string = y+'_'+x;
 
-/* 	const game_click_code = (winmine.multi_cell) ? 'm': 'l';
-	const clicked_cell_id_string = (winmine.multi_cell) ? multi_cell_html_id.substring(5) : cell_id_string;
-	winmine.game_clicks.push([winmine.get_game_duration(1), game_click_code, clicked_cell_id_string]); */
-	
 	/* 1. consider loss, if cell is a mine and at least one cell has been chosen (not first click) */
 	if(winmine.cells[y][x] == 9) {
 		if(winmine.cleared > 0) {
@@ -1750,20 +1746,22 @@ document.addEventListener('DOMContentLoaded', function() {
 				
 				if(flagged_neighboring_cells.length == event.target.classList[1].substring(1) && elem_id !== winmine.most_recent_id) {
 					winmine.most_recent_id = elem_id;
-					const cells_to_choose = neighboring_cells.filter(x => !flagged_neighboring_cells.includes(x));
-					let already_cleared = 0;
-					cells_to_choose.forEach(function (element) {
+					/* in case of game win/loss, save game click before calling choose_cell for any neighboring cell */
+					winmine.game_clicks.push([winmine.get_game_duration(1), 'm', elem_id.substring(5)]);
+					let clicked = 0;
+					const cells_to_consider = neighboring_cells.filter(x => !flagged_neighboring_cells.includes(x));
+					cells_to_consider.forEach(function (element) {
 						const e = document.getElementById('cell_'+element);
 						if(e.classList.contains('clear')) {
-							already_cleared = already_cleared + 1;
 							return;
 						}
+						clicked = clicked + 1;
 						winmine.choose_cell('cell_'+element);
 						e.classList.remove('question'); /* marked cells are triggered like normal cells. remove class to prevent confusion */
 					});
-					/* only record game clicks that trigger a cell (effective clicks) */
-					if(neighboring_cells.length > already_cleared) {
-						winmine.game_clicks.push([winmine.get_game_duration(1), 'm', elem_id.substring(5)]);
+					/* undo game click save if choose_cell was never called / eligible cells were already cleared */
+					if(clicked == 0) {
+						winmine.game_clicks.pop();
 					}
 				}
 			} else {
